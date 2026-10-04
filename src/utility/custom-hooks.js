@@ -94,12 +94,11 @@ export function useFetchGetAPI() {
             setLoading(true);
 
             const queryParams = new URLSearchParams({
-                ...extraQuery,
-                ...query,
-                sortKey: query.sortKey ? query.sortKey : "createdAt",
-                sortOrder: query.sortOrder ? query.sortOrder : "-1",
-            });
-
+    ...query,
+    ...extraQuery,
+    sortKey: extraQuery.sortKey || query.sortKey || "createdAt",
+    sortOrder: extraQuery.sortOrder || query.sortOrder || "-1",
+});
             const res = await fetch(`${API_ENDPOINT.path}?${queryParams.toString()}`, {
                 method: API_ENDPOINT.method,
                 headers: {
