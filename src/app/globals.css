@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-display: var(--font-cinzel), serif;
+  --font-body: var(--font-playfair), serif;
+  --font-sans: var(--font-geist-sans), sans-serif;
+  --font-cormorant-garamond: var(--font-cormorant-garamond), serif;
+  --font-nunito: var(--font-Nunito), sans-serif;
+
+  --color-primary: #F77F00;
+
+  --animate-marquee: marquee 90s linear infinite;
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+.form-label {
+  @apply text-sm font-semibold text-gray-700 font-nunito w-fit flex items-center gap-2;
+}
+
+.form-input {
+  @apply w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+}
+
+.rich-text-content {
+  color: #374151;
+  font-family: var(--font-nunito), sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.9;
+}
+
+.rich-text-content > :first-child {
+  margin-top: 0;
+}
+
+.rich-text-content > :last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-content h2,
+.rich-text-content h3,
+.rich-text-content h4,
+.rich-text-content h5,
+.rich-text-content h6 {
+  color: #111827;
+  font-family: var(--font-cormorant-garamond), serif;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 2rem 0 0.9rem;
+}
+
+.rich-text-content h2 {
+  font-size: clamp(2rem, 2vw + 1rem, 3rem);
+}
+
+.rich-text-content h3 {
+  font-size: clamp(1.75rem, 1.5vw + 0.75rem, 2.4rem);
+}
+
+.rich-text-content h4 {
+  font-size: clamp(1.5rem, 1.2vw + 0.75rem, 2rem);
+}
+
+.rich-text-content h5 {
+  font-size: clamp(1.3rem, 1vw + 0.6rem, 1.6rem);
+}
+
+.rich-text-content h6 {
+  font-size: 1.1rem;
+}
+
+.rich-text-content p {
+  margin: 0 0 1.4rem;
+  color: #4b5563;
+  font-size: 1.05rem;
+  line-height: 1.9;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0 0 1.5rem;
+  padding-left: 1.5rem;
+  color: #374151;
+}
+
+.rich-text-content li {
+  margin-bottom: 0.5rem;
+  line-height: 1.8;
+}
+
+.rich-text-content strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.rich-text-content em {
+  font-style: italic;
+  color: #374151;
+}
+
+.rich-text-content u,
+.rich-text-content underline {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (max-width: 768px) {
+  .rich-text-content {
+    font-size: 1rem;
+  }
+
+  .rich-text-content p {
+    font-size: 1rem;
+  }
+}
