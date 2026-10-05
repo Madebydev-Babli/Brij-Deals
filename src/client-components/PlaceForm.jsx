@@ -231,7 +231,7 @@ export default function PlaceForm({ formData, setFormData, onSubmit, postingData
                             type="file"
                             id="image"
                             name="image"
-                            accept="image/*"
+                            accept="image/jpeg,image/png"
                             onChange={(e) => handleImageChange(e, setFormData)}
                             className="form-input"
                             required={!hasImage(formData.image)}
@@ -245,7 +245,7 @@ export default function PlaceForm({ formData, setFormData, onSubmit, postingData
                             type="file"
                             id="banner"
                             name="banner"
-                            accept="image/*"
+                            accept="image/jpeg,image/png"
                             onChange={(e) => handleImageChange(e, setFormData)}
                             className="form-input"
                             required={!hasImage(formData.banner)}
