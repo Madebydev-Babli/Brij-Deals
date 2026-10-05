@@ -428,35 +428,21 @@ export async function POST(req) {
       }
     }
 
-    const imageUploadResponse = await uploadImage(
-      image.data,
-      "braj_deals/places",
+    const uploadedImage = normalizeUploadedImage(
+      await uploadImage(image.data, "braj_deals/places"),
     );
-    const bannerUploadResponse = await uploadImage(
-      banner.data,
-      "braj_deals/places/banners",
-      1024 * 1024 * 2,
+    const uploadedBanner = normalizeUploadedImage(
+      await uploadImage(
+        banner.data,
+        "braj_deals/places/banners",
+        1024 * 1024 * 2,
+      ),
     );
-    const uploadedImage = normalizeUploadedImage(imageUploadResponse);
-    const uploadedBanner = normalizeUploadedImage(bannerUploadResponse);
+    const uploadedGallery = await uploadGalleryImages(gallery);
 
     if (!uploadedImage || !uploadedBanner) {
-      const failedUploads = [
-        { name: "Place image", uploaded: uploadedImage, response: imageUploadResponse },
-        { name: "Place banner", uploaded: uploadedBanner, response: bannerUploadResponse },
-      ]
-        .filter((upload) => !upload.uploaded)
-        .map(({ name, response }) => {
-          const reason =
-            response?.message ||
-            "Cloudinary did not return a valid image URL and public ID";
-          return `${name}: ${reason}`;
-        });
-
-      throw new Error(`Required image upload failed. ${failedUploads.join("; ")}`);
+      throw new Error("Place image and banner upload failed");
     }
-
-    const uploadedGallery = await uploadGalleryImages(gallery);
 
     const newPlace = new PlaceModel({
       sno: newSno,
@@ -481,8 +467,8 @@ export async function POST(req) {
     await session.commitTransaction();
 
     revalidatePath("/");
-    revalidatePath("/categories/places");
-    revalidatePath(`/categories/places/${generatedSlug}`);
+    revalidatePath("/categories/places-to-visit");
+    revalidatePath(`/categories/places-to-visit/${generatedSlug}`);
 
     return NextResponse.json({
       status: "success",
