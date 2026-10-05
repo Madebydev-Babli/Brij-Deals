@@ -1,343 +1,217 @@
-"use client";
+"use client"
 
 import { useEffect } from "react";
+import { RiDeleteBin7Line } from "react-icons/ri";
+import { FaEdit } from "react-icons/fa";
 import Link from "next/link";
-import { MdAdd, MdEdit, MdDelete, MdLocationOn } from "react-icons/md";
-
 import LoadingComponent from "@/server-components/LoadingComponent";
 import NoDataComponent from "@/server-components/NoDataComponent";
 import PaginationSection from "@/server-components/PaginationSection";
 import ConfirmationPopup from "@/server-components/ConfirmationPopup";
-
 import { API_ENDPOINTS } from "@/utility/constants";
+import { MdAdd } from "react-icons/md";
+import { formatDateTime } from "@/utility/utility-function";
 import { useFetchDeleteAPI, useFetchGetAPI } from "@/utility/custom-hooks";
 
 export default function PlacesPage() {
-    const {
-        fetchGetAPI,
-        dataList,
-        fetchingData,
-        query,
-        setQuery,
-        extra,
-    } = useFetchGetAPI();
-
-    const {
-        handleDeleteClick,
-        cancelDelete,
-        showDeletePopup,
-        fetchDeleteAPI,
-        deletingData,
-    } = useFetchDeleteAPI();
+    const { fetchGetAPI, dataList, fetchingData, query, setQuery, extra } = useFetchGetAPI();
+    const { handleDeleteClick, cancelDelete, showDeletePopup, fetchDeleteAPI, deletingData } = useFetchDeleteAPI();
 
     useEffect(() => {
         fetchGetAPI(API_ENDPOINTS.FETCH_PLACES);
     }, [query]);
 
-    function handleSearch(e) {
-        setQuery((prev) => ({
-            ...prev,
-            searchValue: e.target.value,
-            page: 1,
-        }));
-    }
-
-    function handleDelete() {
-        fetchDeleteAPI(
-            API_ENDPOINTS.DELETE_PLACE,
-            () => fetchGetAPI(API_ENDPOINTS.FETCH_PLACES)
-        );
+    async function confirmDelete() {
+        fetchDeleteAPI(API_ENDPOINTS.DELETE_PLACE, () => {
+            fetchGetAPI(API_ENDPOINTS.FETCH_PLACES);
+        });
     }
 
     return (
-        <section className="space-y-5">
+        <>
+            <section>
+                <div className="grid grid-cols-2 sm:grid-cols-12 gap-4 mb-10">
+                    <div className="col-span-2 sm:col-span-12 lg:col-span-9">
+                        <input
+                            type="text"
+                            placeholder="Search here..."
+                            value={query.searchValue}
+                            onChange={(e) => setQuery({ ...query, searchValue: e.target.value, page: 1 })}
+                            className="form-input"
+                        />
+                    </div>
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-semibold text-gray-900">
-                        Places to Visit
-                    </h1>
-
-                    <p className="text-sm text-gray-500 mt-1">
-                        Manage places, temples and tourist attractions.
-                    </p>
+                    <div className="col-span-2 sm:col-span-12 lg:col-span-3">
+                        <Link
+                            href="/dashboard/places/create"
+                            className="w-full flex justify-center items-center px-6 py-2.5 rounded-md bg-primary text-white hover:opacity-90 transition-opacity duration-200 xl:text-base"
+                        >
+                            <div className="flex gap-1 items-center justify-center">
+                                <span><MdAdd /></span><span>Add Place</span>
+                            </div>
+                        </Link>
+                    </div>
                 </div>
 
-                <Link
-                    href="/dashboard/places/create"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition"
-                >
-                    <MdAdd size={22} />
-                    Add Place
-                </Link>
-            </div>
+                {fetchingData ? <LoadingComponent message="Loading Places..." /> : null}
 
-            {/* Search */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="max-w-md">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Search Places
-                    </label>
+                {dataList?.length === 0 && !fetchingData ? <NoDataComponent message="No Places Found" /> : null}
 
-                    <input
-                        type="text"
-                        value={query.searchValue}
-                        onChange={handleSearch}
-                        placeholder="Search by title, description or location..."
-                        className="form-input"
-                    />
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-
-                {fetchingData ? (
-                    <LoadingComponent />
-                ) : dataList?.length ? (
-                    <>
-                        {/* Desktop Table */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-gray-200 bg-gray-50">
-                                        <th className="text-left px-5 py-4 text-sm font-semibold text-gray-700">
-                                            S.No
-                                        </th>
-
-                                        <th className="text-left px-5 py-4 text-sm font-semibold text-gray-700">
-                                            Place
-                                        </th>
-
-                                        <th className="text-left px-5 py-4 text-sm font-semibold text-gray-700">
-                                            Location
-                                        </th>
-
-                                        <th className="text-left px-5 py-4 text-sm font-semibold text-gray-700">
-                                            Timings
-                                        </th>
-
-                                        <th className="text-right px-5 py-4 text-sm font-semibold text-gray-700">
-                                            Action
-                                        </th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {dataList.map((place) => (
-                                        <tr
-                                            key={place._id}
-                                            className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition"
-                                        >
-                                            <td className="px-5 py-4 text-sm text-gray-600">
-                                                {place.sno}
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
-
-                                                    {place.image?.url ? (
-                                                        <img
-                                                            src={place.image.url}
-                                                            alt={place.title}
-                                                            className="w-14 h-14 rounded-lg object-cover border border-gray-200"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center">
-                                                            <MdLocationOn
-                                                                size={24}
-                                                                className="text-gray-400"
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-900">
-                                                            {place.title}
-                                                        </h3>
-
-                                                        <p className="text-xs text-gray-400 mt-1">
-                                                            /{place.slug}
-                                                        </p>
-                                                    </div>
-
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                                                    <MdLocationOn
-                                                        size={18}
-                                                        className="text-primary"
-                                                    />
-
-                                                    <span>
-                                                        {place.location}
-                                                    </span>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="text-sm text-gray-600">
-                                                    <p>
-                                                        <span className="font-medium">
-                                                            Open:
-                                                        </span>{" "}
-                                                        {place.openingTime}
-                                                    </p>
-
-                                                    <p className="mt-1">
-                                                        <span className="font-medium">
-                                                            Close:
-                                                        </span>{" "}
-                                                        {place.closingTime}
-                                                    </p>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex justify-end items-center gap-2">
-
-                                                    <Link
-                                                        href={`/dashboard/places/${place._id}`}
-                                                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
-                                                        title="Edit Place"
-                                                    >
-                                                        <MdEdit size={20} />
-                                                    </Link>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleDeleteClick(
-                                                                place._id
-                                                            )
-                                                        }
-                                                        className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition cursor-pointer"
-                                                        title="Delete Place"
-                                                    >
-                                                        <MdDelete size={20} />
-                                                    </button>
-
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Cards */}
-                        <div className="md:hidden divide-y divide-gray-100">
-
-                            {dataList.map((place) => (
-                                <div
-                                    key={place._id}
-                                    className="p-4"
-                                >
-                                    <div className="flex gap-3">
-
-                                        {place.image?.url ? (
-                                            <img
-                                                src={place.image.url}
-                                                alt={place.title}
-                                                className="w-20 h-20 rounded-xl object-cover border border-gray-200 shrink-0"
-                                            />
-                                        ) : (
-                                            <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                                                <MdLocationOn
-                                                    size={28}
-                                                    className="text-gray-400"
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="flex-1 min-w-0">
-
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-900">
-                                                        {place.title}
-                                                    </h3>
-
-                                                    <p className="text-xs text-gray-400 mt-1">
-                                                        #{place.sno}
-                                                    </p>
-                                                </div>
-
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                    <Link
-                                                        href={`/dashboard/places/${place._id}`}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                    >
-                                                        <MdEdit size={19} />
-                                                    </Link>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleDeleteClick(
-                                                                place._id
-                                                            )
-                                                        }
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                                                    >
-                                                        <MdDelete size={19} />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-1 mt-2 text-sm text-gray-600">
-                                                <MdLocationOn
-                                                    size={17}
-                                                    className="text-primary shrink-0"
-                                                />
-
-                                                <span className="truncate">
-                                                    {place.location}
+                <div className="hidden lg:block">
+                    {dataList?.length && !fetchingData ? (
+                        <table className="text-left border-collapse mb-5 w-full">
+                            <thead className="bg-gray-200 text-sm uppercase">
+                                <tr>
+                                    <th className="px-4 py-2 w-5">
+                                        <div className="flex justify-center">
+                                            <button
+                                                className="flex gap-1 items-center cursor-pointer"
+                                                onClick={() => {
+                                                    if (query.sortKey !== "sno") {
+                                                        setQuery((prev) => ({ ...prev, sortKey: "sno", sortOrder: "-1" }));
+                                                    } else if (query.sortKey === "sno" && query.sortOrder === "-1") {
+                                                        setQuery((prev) => ({ ...prev, sortOrder: "1" }));
+                                                    } else {
+                                                        setQuery((prev) => ({ ...prev, sortKey: null, sortOrder: null }));
+                                                    }
+                                                    setQuery((prev) => ({ ...prev, page: 1 }));
+                                                }}
+                                                title="Sort by Serial Number"
+                                            >
+                                                <span>S.N.</span>
+                                                <span className="text-xs">
+                                                    {query.sortKey === "sno"
+                                                        ? (query.sortOrder === "-1" ? "▼" : query.sortOrder === "1" ? "▲" : <span className="flex flex-col justify-center items-center gap-0"><span>▲</span><span>▼</span></span>)
+                                                        : <span className="flex flex-col justify-center items-center"><span>▲</span><span>▼</span></span>}
                                                 </span>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-2">Image</th>
+                                    <th className="px-4 py-2">Title</th>
+                                    <th className="px-4 py-2">Location</th>
+                                    <th className="px-4 py-2">Opening Hours</th>
+                                    <th className="px-4 py-2">
+                                        <div className="flex justify-center">
+                                            <button
+                                                className="flex gap-1 items-center cursor-pointer"
+                                                onClick={() => {
+                                                    if (query.sortKey !== "createdAt") {
+                                                        setQuery((prev) => ({ ...prev, sortKey: "createdAt", sortOrder: "-1" }));
+                                                    } else if (query.sortKey === "createdAt" && query.sortOrder === "-1") {
+                                                        setQuery((prev) => ({ ...prev, sortOrder: "1" }));
+                                                    } else {
+                                                        setQuery((prev) => ({ ...prev, sortKey: null, sortOrder: null }));
+                                                    }
+                                                    setQuery((prev) => ({ ...prev, page: 1 }));
+                                                }}
+                                                title="Sort by Time"
+                                            >
+                                                <span>DATE &amp; TIME</span>
+                                                <span className="text-xs">
+                                                    {query.sortKey === "createdAt"
+                                                        ? (query.sortOrder === "-1" ? "▼" : query.sortOrder === "1" ? "▲" : <span className="flex flex-col justify-center items-center gap-0"><span>▲</span><span>▼</span></span>)
+                                                        : <span className="flex flex-col justify-center items-center"><span>▲</span><span>▼</span></span>}
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-2 text-center">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="text-sm">
+                                {dataList.map((place) => (
+                                    <tr key={place._id} className="hover:bg-gray-50 transition-colors duration-200 border-b-1 border-gray-400">
+                                        <td className={`px-4 py-3 text-center ${query.sortKey === "sno" ? "bg-gray-100" : ""}`}>
+                                            {place.sno < 10 ? `0${place.sno}` : place.sno}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {place?.image?.url && <img src={place.image.url} alt={place.title} className="w-12 h-12 object-cover rounded-md" />}
+                                        </td>
+                                        <td className="px-4 py-3">{place.title || "N/A"}</td>
+                                        <td className="px-4 py-3">{place.location || "N/A"}</td>
+                                        <td className="px-4 py-3">{place.openingTime || "N/A"} - {place.closingTime || "N/A"}</td>
+                                        <td className={`px-4 py-3 text-center ${query.sortKey === "createdAt" ? "bg-gray-100" : ""}`}>
+                                            {formatDateTime(place.createdAt)}
+                                        </td>
+                                        <td className="px-4 py-3 align-middle text-center">
+                                            <div className="grid grid-cols-2 gap-2 mx-auto w-fit">
+                                                <Link
+                                                    href={`/dashboard/places/${place._id}`}
+                                                    className="flex items-center justify-center text-lg text-purple-800 border-2 border-purple-800 p-1 hover:bg-purple-200 cursor-pointer"
+                                                    title="Edit"
+                                                >
+                                                    <FaEdit />
+                                                </Link>
+                                                <button
+                                                    title="Delete"
+                                                    onClick={() => handleDeleteClick(place._id)}
+                                                    className="flex items-center justify-center text-lg text-red-800 border-2 border-red-800 p-1 hover:bg-red-200 cursor-pointer"
+                                                >
+                                                    <RiDeleteBin7Line />
+                                                </button>
                                             </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : null}
+                </div>
 
-                                            <p className="text-xs text-gray-500 mt-2">
-                                                {place.openingTime} -{" "}
-                                                {place.closingTime}
-                                            </p>
-
+                <div className="lg:hidden">
+                    {dataList?.length && !fetchingData ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            {dataList.map((place, index) => (
+                                <div key={place._id || index} className="border rounded-md border-gray-300 p-5 flex flex-col justify-between">
+                                    <div>
+                                        {place?.image?.url && <img src={place.image.url} alt={place.title} className="w-full h-auto mb-4 rounded-md" />}
+                                        <h2 className="font-semibold text-xl">S.N: {place.sno < 10 ? `0${place.sno}` : place.sno}</h2>
+                                        <p className="text-gray-600"><span className="font-semibold text-black">Title:</span> {place?.title || "N/A"}</p>
+                                        <p className="text-gray-600"><span className="font-semibold text-black">Location:</span> {place?.location || "N/A"}</p>
+                                        <p className="text-gray-600"><span className="font-semibold text-black">Opening Hours:</span> {place?.openingTime || "N/A"} - {place?.closingTime || "N/A"}</p>
+                                        <p className="text-gray-600"><span className="font-semibold text-black">Date &amp; Time:</span> {formatDateTime(place?.createdAt)}</p>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <div className="flex gap-2 mt-4">
+                                            <Link
+                                                href={`/dashboard/places/${place._id}`}
+                                                className="flex items-center justify-center text-lg text-purple-800 border-2 border-purple-800 p-1 hover:bg-purple-200 cursor-pointer"
+                                                title="Edit"
+                                            >
+                                                <FaEdit />
+                                            </Link>
+                                            <button
+                                                className="flex items-center justify-center text-lg text-red-800 border-2 border-red-800 p-1 hover:bg-red-200 cursor-pointer"
+                                                title="Delete"
+                                                onClick={() => handleDeleteClick(place._id)}
+                                            >
+                                                <RiDeleteBin7Line />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             ))}
-
                         </div>
+                    ) : null}
+                </div>
 
-                        {/* Pagination */}
-                        {dataList?.length && extra?.totalPages > 1 ? (
-                            <PaginationSection
-                                query={query}
-                                setQuery={setQuery}
-                                extra={extra}
-                                loading={fetchingData}
-                            />
-                        ) : null}
-                    </>
-                ) : (
-                    <NoDataComponent />
-                )}
+                {dataList?.length && !fetchingData ? (
+                    <PaginationSection query={query} setQuery={setQuery} extra={extra} loading={fetchingData} />
+                ) : null}
+            </section>
 
-            </div>
-
-            {/* Delete Confirmation */}
-            {showDeletePopup && (
-                <ConfirmationPopup
-                    title="Delete Place"
-                    message="Are you sure you want to delete this place? This action cannot be undone."
-                    onConfirm={handleDelete}
-                    onCancel={cancelDelete}
-                    loading={deletingData}
-                />
-            )}
-
-        </section>
+            <ConfirmationPopup
+                show={showDeletePopup}
+                onConfirm={confirmDelete}
+                onCancel={cancelDelete}
+                title="Confirm Deletion"
+                message="Are you sure you want to delete this place?"
+                loading={deletingData}
+                confirmText="Yes, Delete"
+                loadingText="Deleting..."
+            />
+        </>
     );
 }
