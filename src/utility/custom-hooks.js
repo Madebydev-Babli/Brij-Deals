@@ -199,6 +199,7 @@ export function useFetchDeleteAPI() {
 
 export function useFetchDetailsAPI() {
 
+    const router = useRouter();
     const [loading, setLoading] = useState(false)
 
     async function fetchDetailsAPI(API_ENDPOINT, _id, setFormData, secured = true) {

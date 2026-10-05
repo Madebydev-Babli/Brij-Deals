@@ -66,6 +66,11 @@ export default function AdminHeader({ onClose, isCollapsed, toggleCollapse }) {
             path: "/dashboard/places",
             icon: <MdOutlinePersonSearch />,
         },
+        {
+            title: "Hotels",
+            path: "/dashboard/hotels",
+            icon: <MdOutlinePersonSearch />,
+        },
         // {
         //     title: "Channels",
         //     path: "/dashboard/channel-partners",

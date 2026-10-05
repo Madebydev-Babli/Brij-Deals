@@ -29,6 +29,10 @@ export const API_ENDPOINTS = {
     FETCH_RESTAURENTS: { method: "GET", path: "/api/restaurent" },
     DELETE_RESTAURENT: { method: "DELETE", path: "/api/restaurent" },
 
+    ADD_HOTEL: { method: "POST", path: "/api/hotel" },
+    FETCH_HOTELS: { method: "GET", path: "/api/hotel" },
+    DELETE_HOTEL: { method: "DELETE", path: "/api/hotel" },
+
     ADD_SCHEDULE: { method: "POST", path: "/api/schedule" },
     FETCH_SCHEDULES: { method: "GET", path: "/api/schedule" },
 
