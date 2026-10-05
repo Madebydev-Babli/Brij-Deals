@@ -503,7 +503,9 @@ export async function GET(req) {
     const limit = Number(searchParams.get("limit")) || 10;
     const page = Number(searchParams.get("page")) || 1;
     const searchValue = searchParams.get("searchValue") || "";
+    const location = searchParams.get("location") || "";
     const clearSearchValue = clearSearch(searchValue);
+    const clearLocation = clearSearch(location);
 
     if (_id) {
       const place = await PlaceModel.findById(_id).lean();
@@ -537,8 +539,9 @@ export async function GET(req) {
       });
     }
 
-    const searchQuery = clearSearchValue
-      ? {
+    const searchQuery = {
+      ...(clearSearchValue
+        ? {
           $or: [
             { title: { $regex: clearSearchValue, $options: "i" } },
             { description: { $regex: clearSearchValue, $options: "i" } },
@@ -547,7 +550,11 @@ export async function GET(req) {
             { slug: { $regex: clearSearchValue, $options: "i" } },
           ],
         }
-      : {};
+        : {}),
+      ...(clearLocation
+        ? { location: { $regex: clearLocation, $options: "i" } }
+        : {}),
+    };
 
     const totalData = await PlaceModel.countDocuments();
     const totalFilteredData = await PlaceModel.countDocuments(searchQuery);

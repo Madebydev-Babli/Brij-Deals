@@ -64,25 +64,30 @@ export default function CardLayout({ dataList, loading, callBackUrl }) {
             {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
 
-                {dataList.map(data => (
+                {dataList.map(data => {
+                    const imageSrc = data.logo?.url || data.image?.url || data.image;
+                    const location = data.shortLocation || data.location;
 
+                    return (
                     <Link key={data._id} href={callBackUrl + data.slug} className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-lg shadow-gray-200/50 hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-100/50 transition-all duration-500">
 
                         {/* Image */}
                         <div className="relative w-full h-[220px] overflow-hidden">
 
-                            <Image fill src={data.logo.url} alt={data.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+                            <Image fill src={imageSrc} alt={data.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out" />
 
                             {/* Veg/Non-veg Badge */}
-                            <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5">
+                            {typeof data.isVeg === "boolean" && (
+                                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5">
 
-                                <span className={`w-2 h-2 rounded-full ${data.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                    <span className={`w-2 h-2 rounded-full ${data.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
 
-                                <span className="text-gray-900 text-[10px] sm:text-xs font-bold tracking-wider uppercase">
-                                    {data.isVeg ? 'Pure Veg' : 'Non Veg'}
-                                </span>
+                                    <span className="text-gray-900 text-[10px] sm:text-xs font-bold tracking-wider uppercase">
+                                        {data.isVeg ? 'Pure Veg' : 'Non Veg'}
+                                    </span>
 
-                            </div>
+                                </div>
+                            )}
 
                         </div>
 
@@ -95,7 +100,7 @@ export default function CardLayout({ dataList, loading, callBackUrl }) {
 
                             <div className="flex items-start gap-2 text-gray-500 text-sm font-nunito mb-4">
                                 <FaMapMarkerAlt className="w-3.5 h-3.5 mt-1 text-primary shrink-0" />
-                                <span className="line-clamp-2">{data.shortLocation}</span>
+                                <span className="line-clamp-2">{location}</span>
                             </div>
 
                             <p className="text-gray-600 font-nunito text-sm leading-relaxed line-clamp-2 flex-grow">
@@ -106,7 +111,8 @@ export default function CardLayout({ dataList, loading, callBackUrl }) {
 
                     </Link>
 
-                ))}
+                    );
+                })}
 
             </div>
 
