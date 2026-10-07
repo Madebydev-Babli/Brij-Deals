@@ -23,6 +23,8 @@ export default function ShopIntro({ shop }) {
 
     const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://brijdeals.com';
     const shareTitle = 'Check out the shop on Brij Deals!';
+    const bannerImage = shop?.banner?.url || shop?.banner || "";
+    const logoImage = shop?.logo?.url || shop?.logo || "";
 
     const handleCopy = () => {
         navigator.clipboard.writeText(pageUrl);
@@ -43,7 +45,7 @@ export default function ShopIntro({ shop }) {
             {/* 1. Banner Image */}
             <div className="relative w-full h-[250px] md:h-[350px] lg:h-[450px]">
                 <img
-                    src={shop?.banner}
+                    src={bannerImage}
                     alt={shop?.title}
                     className="w-full h-full object-cover"
                 />
@@ -96,7 +98,7 @@ export default function ShopIntro({ shop }) {
                         <div className="shrink-0 -mt-24 md:-mt-24 lg:-mt-34 flex justify-center md:block">
                             <div className="w-[150px] h-[150px] lg:w-[220px] lg:h-[220px] rounded-full border-[6px] lg:border-[8px] border-white shadow-xl bg-white overflow-hidden relative group">
                                 <img
-                                    src={shop?.logo}
+                                    src={logoImage}
                                     alt={shop?.title}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />

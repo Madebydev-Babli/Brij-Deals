@@ -37,11 +37,13 @@ export default function ProductListSection({ products, phone, whatsapp }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 pt-10">
 
-                    {products.map((product) => {
+                    {products.map((product, index) => {
+
+                        const productImage = product?.image?.url || product?.image || "";
 
                         return (
 
-                            <div key={product.id} className="group flex flex-col sm:flex-row md:flex-col xl:flex-row bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-700 overflow-hidden ring-1 ring-black/5">
+                            <div key={product?._id || product?.id || index} className="group flex flex-col sm:flex-row md:flex-col xl:flex-row bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-700 overflow-hidden ring-1 ring-black/5">
 
                                 {/* Left: Image & Action Section */}
                                 <div className="sm:w-2/5 md:w-full xl:w-2/5 p-5 sm:p-2 md:p-5 xl:p-2 flex flex-col gap-4 border-r border-gray-100">
@@ -49,7 +51,7 @@ export default function ProductListSection({ products, phone, whatsapp }) {
                                     {/* Separate Hero Image (Square) */}
                                     <div className="aspect-square rounded-2xl overflow-hidden shadow-md border border-white relative">
 
-                                        <Image width={200} height={200} src={product.image} alt={product.title} className="w-full h-full object-cover object-center transition-all duration-500" />
+                                        <Image width={200} height={200} src={productImage} alt={product.title} className="w-full h-full object-cover object-center transition-all duration-500" />
 
                                         {/* Price Tag */}
                                         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 z-10">

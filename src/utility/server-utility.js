@@ -64,10 +64,19 @@ export function clearSearch(obj) {
 
 export async function getErrorMessage(error, session = null) {
 
-    if (session) {
+    if (session && typeof session.inTransaction === "function" && session.inTransaction()) {
+        try {
+            await session.abortTransaction();
+        } catch (abortError) {
+            console.log("[Session Abort Skipped]", abortError?.message || abortError);
+        }
 
-        await session.abortTransaction();
-        session.endSession();
+        try {
+            session.endSession();
+        } catch (endError) {
+            console.log("[Session End Skipped]", endError?.message || endError);
+        }
+
         console.log("[Session Aborted]");
     }
 

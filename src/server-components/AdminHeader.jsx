@@ -71,6 +71,11 @@ export default function AdminHeader({ onClose, isCollapsed, toggleCollapse }) {
             path: "/dashboard/hotels",
             icon: <MdOutlinePersonSearch />,
         },
+        {
+            title: "Religious Shops",
+            path: "/dashboard/religious-shops",
+            icon: <MdOutlinePersonSearch />,
+        },
         // {
         //     title: "Channels",
         //     path: "/dashboard/channel-partners",

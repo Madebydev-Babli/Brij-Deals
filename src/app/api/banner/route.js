@@ -7,105 +7,303 @@ import { BannerModel } from "../../../../backend/models/banner";
 import { clearSearch, deleteImage, getErrorMessage, uploadImage } from "@/utility/server-utility";
 
 export async function POST(req) {
-
     let session = null;
 
     try {
-
         await connectToDatabase();
 
-        session = await mongoose.startSession();
-        session.startTransaction();
-
+        // Verify authentication before starting transaction
         const decoded = await verifyToken(req);
 
         if (!decoded) {
-            return NextResponse.json({ status: 'error', message: "Unauthorized access", data: null, error: "Unauthorized access" }, { status: 401 });
+            return NextResponse.json(
+                {
+                    status: "error",
+                    message: "Unauthorized access",
+                    data: null,
+                    error: "Unauthorized access",
+                },
+                { status: 401 }
+            );
         }
 
-        const { _id, sno, title, description, link, button, image } = await req.json();
-        const maxSno = await BannerModel.findOne({}).sort({ sno: -1 });
-
+        const {
+            _id,
+            sno,
+            title,
+            description,
+            link,
+            button,
+            image,
+        } = await req.json();
+        
+        // Validate data BEFORE starting transaction
         if (!title) {
-            return NextResponse.json({ status: "error", message: "Title is required", data: null, error: "Title is required" }, { status: 400 });
+            return NextResponse.json(
+                {
+                    status: "error",
+                    message: "Title is required",
+                    data: null,
+                    error: "Title is required",
+                },
+                { status: 400 }
+            );
         }
 
         if (!link) {
-            return NextResponse.json({ status: "error", message: "Link is required", data: null, error: "Link is required" }, { status: 400 });
+            return NextResponse.json(
+                {
+                    status: "error",
+                    message: "Link is required",
+                    data: null,
+                    error: "Link is required",
+                },
+                { status: 400 }
+            );
         }
 
         if (!button) {
-            return NextResponse.json({ status: "error", message: "Button is required", data: null, error: "Button is required" }, { status: 400 });
+            return NextResponse.json(
+                {
+                    status: "error",
+                    message: "Button is required",
+                    data: null,
+                    error: "Button is required",
+                },
+                { status: 400 }
+            );
         }
 
         if (!image) {
-            return NextResponse.json({ status: "error", message: "Image is required", data: null, error: "Image is required" }, { status: 400 });
+            return NextResponse.json(
+                {
+                    status: "error",
+                    message: "Image is required",
+                    data: null,
+                    error: "Image is required",
+                },
+                { status: 400 }
+            );
         }
 
         if (!description) {
-            return NextResponse.json({ status: "error", message: "Description is required", data: null, error: "Description is required" }, { status: 400 });
+            return NextResponse.json(
+                {
+                    status: "error",
+                    message: "Description is required",
+                    data: null,
+                    error: "Description is required",
+                },
+                { status: 400 }
+            );
         }
 
-        if (_id) {
+        // Start transaction only after validation
+        session = await mongoose.startSession();
+        session.startTransaction();
 
+        const maxSno = await BannerModel.findOne({})
+            .sort({ sno: -1 })
+            .session(session);
+
+        if (_id) {
             if (!sno) {
-                return NextResponse.json({ status: "error", message: "S No is required", data: null, error: "S No is required" }, { status: 400 });
+                await session.abortTransaction();
+                session.endSession();
+
+                return NextResponse.json(
+                    {
+                        status: "error",
+                        message: "S No is required",
+                        data: null,
+                        error: "S No is required",
+                    },
+                    { status: 400 }
+                );
             }
 
-            const banner = await BannerModel.findById(_id);
+            const banner = await BannerModel.findById(_id).session(session);
 
             if (!banner) {
-                return NextResponse.json({ status: "error", message: "Banner not found", data: null, error: "Banner not found" }, { status: 404 });
+                await session.abortTransaction();
+                session.endSession();
+
+                return NextResponse.json(
+                    {
+                        status: "error",
+                        message: "Banner not found",
+                        data: null,
+                        error: "Banner not found",
+                    },
+                    { status: 404 }
+                );
             }
 
             if (sno < banner.sno) {
-                await BannerModel.updateMany({ sno: { $gte: sno, $lt: banner.sno } }, { $inc: { sno: 1 } }, { session });
+                await BannerModel.updateMany(
+                    {
+                        sno: {
+                            $gte: sno,
+                            $lt: banner.sno,
+                        },
+                    },
+                    {
+                        $inc: { sno: 1 },
+                    },
+                    { session }
+                );
             }
 
             if (sno > banner.sno) {
-                await BannerModel.updateMany({ sno: { $gt: banner.sno, $lte: sno } }, { $inc: { sno: -1 } }, { session });
+                await BannerModel.updateMany(
+                    {
+                        sno: {
+                            $gt: banner.sno,
+                            $lte: sno,
+                        },
+                    },
+                    {
+                        $inc: { sno: -1 },
+                    },
+                    { session }
+                );
             }
 
-            const uploadedImage = await uploadImage(image, "braj_deals/banners", 1024 * 1024 * 2);
+            const uploadedImage = image && image.data
+    ? await uploadImage(
+        image.data,
+        "braj_deals/banners",
+        1024 * 1024 * 2
+    )
+    : null;
 
-            await BannerModel.findByIdAndUpdate(_id, { sno: maxSno.sno >= sno ? sno : maxSno.sno, title, link, button, image: uploadedImage ? { url: uploadedImage.secure_url, publicId: uploadedImage.public_id } : banner.image, description }, { new: true, session });
+            if (!uploadedImage?.secure_url || !uploadedImage?.public_id) {
+    throw new Error("Banner image upload failed");
+}
+
+            await BannerModel.findByIdAndUpdate(
+                _id,
+                {
+                    sno: maxSno?.sno >= sno ? sno : maxSno?.sno || sno,
+                    title,
+                    link,
+                    button,
+                    image: {
+                        url: uploadedImage.secure_url,
+                        publicId: uploadedImage.public_id,
+                    },
+                    description,
+                },
+                {
+                    new: true,
+                    session,
+                }
+            );
 
             await session.commitTransaction();
             session.endSession();
 
-            if (uploadedImage) {
+            if (banner.image?.publicId) {
                 await deleteImage(banner.image.publicId);
             }
 
             revalidatePath("/");
 
-            return NextResponse.json({ status: "success", message: "Banner updated successfully", data: null, error: null }, { status: 200 });
-
-        } else {
-
-            const snoPresent = await BannerModel.findOne({ sno });
-
-            if (snoPresent) {
-                await BannerModel.updateMany({ sno: { $gte: sno } }, { $inc: { sno: 1 } }, { session });
-            }
-
-            const uploadedImage = await uploadImage(image, "braj_deals/banners", 1024 * 1024 * 2);
-
-            const newBanner = new BannerModel({ sno: sno ? sno : maxSno?.sno ? maxSno?.sno + 1 : 1, title, link, button, image: { url: uploadedImage.secure_url, publicId: uploadedImage.public_id }, description });
-
-            await newBanner.save({ session });
-
-            await session.commitTransaction();
-            session.endSession();
-
-            revalidatePath("/");
-
-            return NextResponse.json({ status: "success", message: "Banner added successfully", data: null, error: null }, { status: 201 });
+            return NextResponse.json(
+                {
+                    status: "success",
+                    message: "Banner updated successfully",
+                    data: null,
+                    error: null,
+                },
+                { status: 200 }
+            );
         }
 
+        // CREATE
+
+        const snoPresent = await BannerModel.findOne({ sno }).session(session);
+
+        if (snoPresent) {
+            await BannerModel.updateMany(
+                {
+                    sno: { $gte: sno },
+                },
+                {
+                    $inc: { sno: 1 },
+                },
+                { session }
+            );
+        }
+
+        const uploadedImage = image && image.data
+    ? await uploadImage(
+        image.data,
+        "braj_deals/banners",
+        1024 * 1024 * 2
+    )
+    : null;
+
+        if (!uploadedImage?.secure_url || !uploadedImage?.public_id) {
+    throw new Error("Banner image upload failed");
+}
+
+        const newBanner = new BannerModel({
+            sno: sno
+                ? sno
+                : maxSno?.sno
+                    ? maxSno.sno + 1
+                    : 1,
+            title,
+            link,
+            button,
+            image: {
+                url: uploadedImage.secure_url,
+                publicId: uploadedImage.public_id,
+            },
+            description,
+        });
+
+        await newBanner.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        revalidatePath("/");
+
+        return NextResponse.json(
+            {
+                status: "success",
+                message: "Banner added successfully",
+                data: null,
+                error: null,
+            },
+            { status: 201 }
+        );
+
     } catch (error) {
-        const errorMessage = await getErrorMessage(error, session);
-        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: 500 });
+        console.error("BANNER POST ERROR:", error);
+
+        if (session) {
+            try {
+                await session.abortTransaction();
+                session.endSession();
+            } catch (sessionError) {
+                console.error("SESSION ERROR:", sessionError);
+            }
+        }
+
+        const errorMessage = await getErrorMessage(error);
+
+        return NextResponse.json(
+            {
+                status: "error",
+                data: null,
+                message: errorMessage,
+                error: errorMessage,
+            },
+            { status: 500 }
+        );
     }
 }
 

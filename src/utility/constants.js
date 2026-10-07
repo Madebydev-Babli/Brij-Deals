@@ -33,6 +33,10 @@ export const API_ENDPOINTS = {
     FETCH_HOTELS: { method: "GET", path: "/api/hotel" },
     DELETE_HOTEL: { method: "DELETE", path: "/api/hotel" },
 
+    ADD_RELIGIOUS_SHOP: { method: "POST", path: "/api/religious-shop" },
+    FETCH_RELIGIOUS_SHOPS: { method: "GET", path: "/api/religious-shop" },
+    DELETE_RELIGIOUS_SHOP: { method: "DELETE", path: "/api/religious-shop" },
+
     ADD_SCHEDULE: { method: "POST", path: "/api/schedule" },
     FETCH_SCHEDULES: { method: "GET", path: "/api/schedule" },
 
