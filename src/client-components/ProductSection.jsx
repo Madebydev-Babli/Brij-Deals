@@ -40,6 +40,7 @@ export default function ProductListSection({ products, phone, whatsapp }) {
                     {products.map((product, index) => {
 
                         const productImage = product?.image?.url || product?.image || "";
+                        const hasProductImage = Boolean(productImage && productImage.trim());
 
                         return (
 
@@ -51,7 +52,13 @@ export default function ProductListSection({ products, phone, whatsapp }) {
                                     {/* Separate Hero Image (Square) */}
                                     <div className="aspect-square rounded-2xl overflow-hidden shadow-md border border-white relative">
 
-                                        <Image width={200} height={200} src={productImage} alt={product.title} className="w-full h-full object-cover object-center transition-all duration-500" />
+                                        {hasProductImage ? (
+                                            <Image width={200} height={200} src={productImage} alt={product.title || "Product image"} className="w-full h-full object-cover object-center transition-all duration-500" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 text-primary font-bold text-sm uppercase tracking-wide">
+                                                No Image
+                                            </div>
+                                        )}
 
                                         {/* Price Tag */}
                                         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 z-10">
