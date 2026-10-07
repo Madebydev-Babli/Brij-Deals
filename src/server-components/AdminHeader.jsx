@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { MdOutlineDashboard, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdOutlineDesignServices, MdOutlinePersonSearch, MdOutlineHub, MdOutlineAssignment, MdOutlineHandshake, MdOutlinePeople, MdOutlineInsights, MdOutlineArticle } from "react-icons/md";
+import { MdOutlineDashboard, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight,
+     MdOutlineDesignServices,MdOutlinePersonSearch, MdOutlineRestaurant, MdOutlineHotel,
+      MdOutlineStorefront, MdOutlineHub, MdOutlineAssignment, MdOutlineHandshake, MdOutlinePeople,
+       MdOutlineInsights, MdOutlineArticle } from "react-icons/md";
 import { usePathname, useRouter } from "next/navigation";
 import { FaRegQuestionCircle, FaRegStar } from "react-icons/fa";
 import { RiLogoutBoxLine } from "react-icons/ri";
@@ -59,7 +62,7 @@ export default function AdminHeader({ onClose, isCollapsed, toggleCollapse }) {
         {
             title: "Restaurents",
             path: "/dashboard/restaurents",
-            icon: <MdOutlinePersonSearch />,
+            icon: <MdOutlineRestaurant />,
         },
         {
             title: "Places to Visit",
@@ -69,12 +72,12 @@ export default function AdminHeader({ onClose, isCollapsed, toggleCollapse }) {
         {
             title: "Hotels",
             path: "/dashboard/hotels",
-            icon: <MdOutlinePersonSearch />,
+            icon: <MdOutlineHotel />,
         },
         {
             title: "Religious Shops",
             path: "/dashboard/religious-shops",
-            icon: <MdOutlinePersonSearch />,
+            icon: <MdOutlineStorefront />,
         },
         // {
         //     title: "Channels",

@@ -104,7 +104,7 @@ export default function HotelsPage() {
                                     </th>
                                     <th className="px-4 py-2">Hotel</th>
                                     <th className="px-4 py-2">Location</th>
-                                    <th className="px-4 py-2">Starting Price</th>
+                                    <th className="px-4 py-2"> Price</th>
                                     <th className="px-4 py-2">Rating</th>
                                     <th className="px-4 py-2">Contact</th>
                                     <th className="px-4 py-2">
