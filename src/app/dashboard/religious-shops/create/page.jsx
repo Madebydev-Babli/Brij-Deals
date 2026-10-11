@@ -186,14 +186,17 @@ export function ReligiousShopForm({ formData, setFormData, onSubmit, submitLabel
                         <label htmlFor="sno" className="form-label">S.No.</label>
                         <input type="text" id="sno" name="sno" value={formData.sno} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="Enter serial number" />
                     </div>
+
                     <div>
                         <label htmlFor="title" className="form-label">Title</label>
                         <input type="text" id="title" name="title" value={formData.title} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="Enter shop title" required />
                     </div>
+
                     <div>
                         <label htmlFor="slug" className="form-label">Slug</label>
                         <input type="text" id="slug" name="slug" value={formData.slug} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="shop-slug" />
                     </div>
+
                     <div>
                         <label htmlFor="shortLocation" className="form-label">Short Location</label>
                         <select id="shortLocation" name="shortLocation" value={formData.shortLocation} onChange={(e) => handleInputChange(e, setFormData)} className="form-input">
@@ -203,119 +206,124 @@ export function ReligiousShopForm({ formData, setFormData, onSubmit, submitLabel
                             ))}
                         </select>
                     </div>
+
+                    <div>
+                        <label htmlFor="location" className="form-label">Location</label>
+                        <input type="text" id="location" name="location" value={formData.location} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="Full address" required />
+                    </div>
+
+                    <div>
+                        <label htmlFor="mapLink" className="form-label">Map Link</label>
+                        <input type="text" id="mapLink" name="mapLink" value={formData.mapLink} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="Google Maps link" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="email" className="form-label">Email</label>
+                        <input type="email" id="email" name="email" value={formData.email} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="shop@example.com" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="phone" className="form-label">Phone</label>
+                        <input type="text" id="phone" name="phone" value={formData.phone} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="9876543210" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="whatsapp" className="form-label">WhatsApp</label>
+                        <input type="text" id="whatsapp" name="whatsapp" value={formData.whatsapp} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="919876543210" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="website" className="form-label">Website</label>
+                        <input type="text" id="website" name="website" value={formData.website} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="instagram" className="form-label">Instagram</label>
+                        <input type="text" id="instagram" name="instagram" value={formData.instagram} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://instagram.com/" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="facebook" className="form-label">Facebook</label>
+                        <input type="text" id="facebook" name="facebook" value={formData.facebook} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://facebook.com/" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="youtube" className="form-label">YouTube</label>
+                        <input type="text" id="youtube" name="youtube" value={formData.youtube} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://youtube.com/" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="googleReview" className="form-label">Google Review</label>
+                        <input type="text" id="googleReview" name="googleReview" value={formData.googleReview} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://maps.google.com/" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="openingTime" className="form-label">Opening Time</label>
+                        <input type="text" id="openingTime" name="openingTime" value={formData.openingTime} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="08:00 AM" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="closingTime" className="form-label">Closing Time</label>
+                        <input type="text" id="closingTime" name="closingTime" value={formData.closingTime} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="10:30 PM" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="rating" className="form-label">Rating</label>
+                        <input type="number" step="0.1" min="0" max="5" id="rating" name="rating" value={formData.rating} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="4.5" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="reviewCount" className="form-label">Review Count</label>
+                        <input type="number" id="reviewCount" name="reviewCount" value={formData.reviewCount} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="100" />
+                    </div>
+
                     <div className="md:col-span-2">
-                        <label htmlFor="description" className="form-label">Description</label>
-                        <textarea id="description" name="description" value={formData.description} onChange={(e) => handleInputChange(e, setFormData)} rows="4" className="form-input" placeholder="Enter shop description" required />
+                        <label htmlFor="startingPrice" className="form-label">Starting Price</label>
+                        <input type="number" id="startingPrice" name="startingPrice" value={formData.startingPrice} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="2500" required />
                     </div>
                 </div>
 
-                <div className="mb-6 border rounded-xl p-4">
-                    <h2 className="font-semibold text-lg mb-4">Images</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label htmlFor="image" className="form-label">Main Image</label>
-                            <input type="file" id="image" name="image" accept="image/*" onChange={(e) => handleImageChange(e, setFormData)} className="form-input" required={!hasImage(formData.image)} />
-                            <ImagePreview image={formData.image} alt="Shop main preview" />
-                        </div>
-                        <div>
-                            <label htmlFor="logo" className="form-label">Logo</label>
-                            <input type="file" id="logo" name="logo" accept="image/*" onChange={(e) => handleImageChange(e, setFormData)} className="form-input" required={!hasImage(formData.logo)} />
-                            <ImagePreview image={formData.logo} alt="Shop logo preview" />
-                        </div>
-                        <div>
-                            <label htmlFor="banner" className="form-label">Banner</label>
-                            <input type="file" id="banner" name="banner" accept="image/*" onChange={(e) => handleImageChange(e, setFormData)} className="form-input" required={!hasImage(formData.banner)} />
-                            <ImagePreview image={formData.banner} alt="Shop banner preview" />
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label htmlFor="image" className="form-label">Main Image</label>
+                        <input type="file" id="image" name="image" accept="image/*" onChange={(e) => handleImageChange(e, setFormData)} className="form-input" required={!hasImage(formData.image)} />
+                        <ImagePreview image={formData.image} alt="Shop main preview" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="logo" className="form-label">Logo</label>
+                        <input type="file" id="logo" name="logo" accept="image/*" onChange={(e) => handleImageChange(e, setFormData)} className="form-input" required={!hasImage(formData.logo)} />
+                        <ImagePreview image={formData.logo} alt="Shop logo preview" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="banner" className="form-label">Banner</label>
+                        <input type="file" id="banner" name="banner" accept="image/*" onChange={(e) => handleImageChange(e, setFormData)} className="form-input" required={!hasImage(formData.banner)} />
+                        <ImagePreview image={formData.banner} alt="Shop banner preview" />
                     </div>
                 </div>
 
-                <div className="mb-6 border rounded-xl p-4">
-                    <h2 className="font-semibold text-lg mb-4">Location & Contact</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="location" className="form-label">Location</label>
-                            <input type="text" id="location" name="location" value={formData.location} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="Full address" required />
-                        </div>
-                        <div>
-                            <label htmlFor="mapLink" className="form-label">Map Link</label>
-                            <input type="text" id="mapLink" name="mapLink" value={formData.mapLink} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="Google Maps link" />
-                        </div>
-                        <div>
-                            <label htmlFor="email" className="form-label">Email</label>
-                            <input type="email" id="email" name="email" value={formData.email} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="shop@example.com" />
-                        </div>
-                        <div>
-                            <label htmlFor="phone" className="form-label">Phone</label>
-                            <input type="text" id="phone" name="phone" value={formData.phone} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="9876543210" />
-                        </div>
-                        <div>
-                            <label htmlFor="whatsapp" className="form-label">WhatsApp</label>
-                            <input type="text" id="whatsapp" name="whatsapp" value={formData.whatsapp} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="919876543210" />
-                        </div>
-                        <div>
-                            <label htmlFor="website" className="form-label">Website</label>
-                            <input type="text" id="website" name="website" value={formData.website} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://" />
-                        </div>
-                    </div>
+                <div className="mb-2">
+                    <label htmlFor="description" className="form-label">Description</label>
+                    <textarea id="description" name="description" value={formData.description} onChange={(e) => handleInputChange(e, setFormData)} rows="4" className="form-input" placeholder="Enter shop description" required />
                 </div>
 
-                <div className="mb-6 border rounded-xl p-4">
-                    <h2 className="font-semibold text-lg mb-4">Social Links</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="instagram" className="form-label">Instagram</label>
-                            <input type="text" id="instagram" name="instagram" value={formData.instagram} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://instagram.com/" />
-                        </div>
-                        <div>
-                            <label htmlFor="facebook" className="form-label">Facebook</label>
-                            <input type="text" id="facebook" name="facebook" value={formData.facebook} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://facebook.com/" />
-                        </div>
-                        <div>
-                            <label htmlFor="youtube" className="form-label">YouTube</label>
-                            <input type="text" id="youtube" name="youtube" value={formData.youtube} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://youtube.com/" />
-                        </div>
-                        <div>
-                            <label htmlFor="googleReview" className="form-label">Google Review</label>
-                            <input type="text" id="googleReview" name="googleReview" value={formData.googleReview} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="https://maps.google.com/" />
-                        </div>
+                <div className="mt-6 mb-6">
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                        <h2 className="font-semibold text-lg">Products</h2>
+                        <button type="button" onClick={addProduct} className="flex items-center gap-1 cursor-pointer text-white px-4 py-2 rounded-md bg-primary hover:opacity-90">
+                            <MdAdd />
+                            Add
+                        </button>
                     </div>
-                </div>
 
-                <div className="mb-6 border rounded-xl p-4">
-                    <h2 className="font-semibold text-lg mb-4">Business Information</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="openingTime" className="form-label">Opening Time</label>
-                            <input type="text" id="openingTime" name="openingTime" value={formData.openingTime} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="08:00 AM" />
-                        </div>
-                        <div>
-                            <label htmlFor="closingTime" className="form-label">Closing Time</label>
-                            <input type="text" id="closingTime" name="closingTime" value={formData.closingTime} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="10:30 PM" />
-                        </div>
-                        <div>
-                            <label htmlFor="rating" className="form-label">Rating</label>
-                            <input type="number" step="0.1" min="0" max="5" id="rating" name="rating" value={formData.rating} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="4.5" />
-                        </div>
-                        <div>
-                            <label htmlFor="reviewCount" className="form-label">Review Count</label>
-                            <input type="number" id="reviewCount" name="reviewCount" value={formData.reviewCount} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="100" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label htmlFor="startingPrice" className="form-label">Starting Price</label>
-                            <input type="number" id="startingPrice" name="startingPrice" value={formData.startingPrice} onChange={(e) => handleInputChange(e, setFormData)} className="form-input" placeholder="2500" required />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mb-6 border rounded-xl p-4">
-                    <SectionHeading title="Products" onAdd={addProduct} />
                     {formData.products.map((product, index) => (
-                        <div key={product._id || index} className="border rounded-xl p-4 mb-4">
+                        <div key={product._id || index} className="mb-6">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-medium">Product #{index + 1}</h3>
                                 <RemoveButton onClick={() => removeProduct(index)} label="Product" />
                             </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="form-label">Title</label>
@@ -369,14 +377,22 @@ export function ReligiousShopForm({ formData, setFormData, onSubmit, submitLabel
                     ))}
                 </div>
 
-                <div className="mb-6 border rounded-xl p-4">
-                    <SectionHeading title="Nearby Attractions" onAdd={addAttraction} />
+                <div className="mb-6">
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                        <h2 className="font-semibold text-lg">Nearby Attractions</h2>
+                        <button type="button" onClick={addAttraction} className="flex items-center gap-1 cursor-pointer text-white px-4 py-2 rounded-md bg-primary hover:opacity-90">
+                            <MdAdd />
+                            Add
+                        </button>
+                    </div>
+
                     {formData.attractions.map((attraction, index) => (
-                        <div key={index} className="border rounded-xl p-4 mb-4">
+                        <div key={index} className="mb-6">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-medium">Attraction #{index + 1}</h3>
                                 <RemoveButton onClick={() => removeAttraction(index)} label="Attraction" />
                             </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="form-label">Title</label>
