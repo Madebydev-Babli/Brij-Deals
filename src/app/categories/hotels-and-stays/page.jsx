@@ -6,8 +6,7 @@ import { useEffect } from "react";
 import { FaChevronDown, FaFilter, FaMapMarkerAlt, FaSearch, FaTag } from 'react-icons/fa';
 import { useFetchGetAPI } from "@/utility/custom-hooks";
 import { API_ENDPOINTS } from "@/utility/constants";
-import LoadingComponent from "@/server-components/LoadingComponent";
-import NoDataComponent from "@/server-components/NoDataComponent";
+import CardLayout from "@/server-components/CardsLayout";
 
 export default function Page() {
     const { fetchGetAPI, dataList, fetchingData, query, setQuery } = useFetchGetAPI();
@@ -161,67 +160,12 @@ export default function Page() {
 
                 </section >
 
-                <section className="min-h-screen">
-
-                    <section className="px-5 sm:px-10 max-w-[1370px] mx-auto pb-20 mt-8 md:mt-12">
-
-                        {fetchingData ? <LoadingComponent message="Loading Hotels..." /> : null}
-
-                        {!fetchingData && hotels.length === 0 ? <NoDataComponent message="No Hotels Found" /> : null}
-
-                        {!fetchingData && hotels.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-
-                                {hotels.map(hotel => (
-
-                                    <Link href={`/categories/hotels-and-stays/${hotel.slug}`} key={hotel._id} className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-lg shadow-gray-200/50 hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-100/50 transition-all duration-500">
-
-                                        {/* Image */}
-                                        <div className="relative w-full h-[220px] overflow-hidden">
-
-                                            <img src={hotel.image?.url || hotel.image} alt={hotel.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out" />
-
-                                            {/* Price Badge */}
-                                            <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5">
-                                                <FaTag className="text-primary w-2.5 h-2.5" />
-                                                <span className="text-gray-900 text-[10px] sm:text-xs font-bold tracking-wider uppercase">
-                                                    Starting ₹{hotel.startingPrice}
-                                                </span>
-                                            </div>
-
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="p-5 flex flex-col flex-grow">
-
-                                            <h3 className="text-xl font-bold font-cormorant-garamond text-gray-900 mb-3 leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                                                {hotel.title}
-                                            </h3>
-
-                                            <div className="flex items-start gap-2 text-gray-500 text-sm font-nunito mb-4">
-                                                <FaMapMarkerAlt className="w-3.5 h-3.5 mt-1 text-primary shrink-0" />
-                                                <span className="line-clamp-2">{hotel.location}</span>
-                                            </div>
-
-                                            <p className="text-gray-600 font-nunito text-sm leading-relaxed line-clamp-2 flex-grow">
-                                                {hotel.description}
-                                            </p>
-
-                                        </div>
-
-                                    </Link>
-
-                                ))}
-
-                            </div>
-                        ) : null}
-
-                    </section>
-
-                </section>
-
+                <CardLayout
+    dataList={dataList}
+    loading={fetchingData}
+    callBackUrl="/categories/hotels-and-stays/"
+    type="shop"
+/>
             </WebsiteLayout>
         </>
     );

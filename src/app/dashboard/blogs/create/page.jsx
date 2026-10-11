@@ -5,6 +5,16 @@ import Image from "next/image";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchPostAPI } from "@/utility/custom-hooks";
 import { handleImageChange, handleInputChange } from "@/utility/utility-function";
+import RichTextEditor from "@/client-components/RichEditorText";
+
+const BLOG_CATEGORIES = [
+  "Travel",
+  "Religious Places",
+  "Festivals",
+  "Culture & Heritage",
+  "Food",
+  "Travel Tips",
+];
 
 const initialFormData = {
     sno: '',
@@ -55,10 +65,30 @@ export default function AddNewBlogPage() {
                         <input placeholder="Enter the author name" type="text" id="author" name="author" value={formData.author} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
                     </div>
 
-                    <div>
-                        <label htmlFor="category" className="form-label">Category</label>
-                        <input placeholder="Enter the category" type="text" id="category" name="category" value={formData.category} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+                    
+<div>
+  <label htmlFor="category" className="form-label">
+    Category
+  </label>
+
+  <select
+    id="category"
+    name="category"
+    value={formData.category}
+    onChange={(e) => handleInputChange(e, setFormData)}
+    className="form-input"
+    required
+  >
+    <option value="">Select a category</option>
+
+    {BLOG_CATEGORIES.map((category) => (
+      <option key={category} value={category}>
+        {category}
+      </option>
+    ))}
+  </select>
+</div>
+
 
                     <div>
                         <label htmlFor="date" className="form-label">Date</label>
@@ -80,10 +110,23 @@ export default function AddNewBlogPage() {
                     <textarea placeholder="Enter the short description" id="description" name="description" value={formData.description} onChange={(e) => { handleInputChange(e, setFormData) }} rows="2" className="form-input"></textarea>
                 </div>
 
-                <div className="mb-4">
-                    <label htmlFor="content" className="form-label">Content</label>
-                    <textarea placeholder="Enter the blog content" id="content" name="content" value={formData.content} onChange={(e) => { handleInputChange(e, setFormData) }} rows="6" className="form-input"></textarea>
-                </div>
+            
+<div className="mb-4">
+    <label className="form-label mb-1">
+        Blog Content
+    </label>
+
+    <RichTextEditor
+        value={formData.content}
+        onChange={(value) =>
+            setFormData((prev) => ({
+                ...prev,
+                content: value,
+            }))
+        }
+    />
+</div>
+
 
                 <div className="mt-6">
                     <button type="submit" disabled={postingData} className="cursor-pointer text-white px-4 py-2 rounded-md bg-primary hover:opacity-90">

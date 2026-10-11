@@ -7,6 +7,7 @@ import LoadingComponent from "@/server-components/LoadingComponent";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchDetailsAPI, useFetchPostAPI } from "@/utility/custom-hooks";
 import { handleImageChange, handleInputChange } from "@/utility/utility-function";
+import RichTextEditor from "@/client-components/RichEditorText";
 
 const initialFormData = {
     sno: '',
@@ -93,10 +94,20 @@ export default function EditBlogPage() {
                     <textarea placeholder="Enter the short description" id="description" name="description" value={formData.description} onChange={(e) => { handleInputChange(e, setFormData) }} rows="2" className="form-input"></textarea>
                 </div>
 
-                <div className="mb-4">
-                    <label htmlFor="content" className="form-label">Content</label>
-                    <textarea placeholder="Enter the blog content" id="content" name="content" value={formData.content} onChange={(e) => { handleInputChange(e, setFormData) }} rows="6" className="form-input"></textarea>
-                </div>
+            
+<div className="mb-4">
+    <label className="form-label">Content</label>
+
+    <RichTextEditor
+        value={formData.content || ""}
+        onChange={(value) =>
+            setFormData((prev) => ({
+                ...prev,
+                content: value,
+            }))
+        }
+    />
+</div>
 
                 <div className="mt-6">
                     <button type="submit" disabled={postingData} className="cursor-pointer text-white px-4 py-2 rounded-md bg-primary hover:opacity-90">

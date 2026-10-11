@@ -375,12 +375,17 @@ export async function GET(req) {
         const {
             _id,
             slug,
+            category = "",
             sortOrder = -1,
             sortKey = "createdAt",
             limit = 10,
             page = 1,
             searchValue = ""
         } = Object.fromEntries(searchParams.entries());
+
+        const normalizedCategory = typeof category === "string"
+            ? category.trim()
+            : "";
 
         const search = {
 
@@ -389,6 +394,17 @@ export async function GET(req) {
                 : undefined,
 
             slug: slug || undefined,
+
+            ...(normalizedCategory
+                ? {
+                    category: {
+                        $regex: new RegExp(
+                            `^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+                            "i"
+                        )
+                    }
+                }
+                : {}),
 
             $or: [
                 {

@@ -1,206 +1,150 @@
-'use client';
+"use client";
 
 import WebsiteLayout from "@/client-components/WebsiteLayout";
 import Link from "next/link";
-import { FaChevronRight } from "react-icons/fa";
+import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
 import { useEffect } from "react";
 import { useFetchGetAPI } from "@/utility/custom-hooks";
 import { API_ENDPOINTS } from "@/utility/constants";
-import LoadingComponent from "@/server-components/LoadingComponent";
-import NoDataComponent from "@/server-components/NoDataComponent";
+import CardLayout from "@/server-components/CardsLayout";
 
 export default function Page() {
+  const { fetchGetAPI, dataList, fetchingData, query, setQuery } =
+    useFetchGetAPI();
 
-    const {
-        fetchGetAPI,
-        dataList,
-        fetchingData,
-        query,
-        setQuery
-    } = useFetchGetAPI();
-
-    useEffect(() => {
-        fetchGetAPI(
-            API_ENDPOINTS.FETCH_BLOGS,
-            {
-                page: 1,
-                limit: 100000,
-                sortKey: "createdAt",
-                sortOrder: "-1"
-            },
-            false
-        );
-    }, []);
-
-    return (
-        <WebsiteLayout>
-
-            {/* Header */}
-            <section className="bg-primary/20">
-
-                <div className="px-5 sm:px-10 max-w-[1370px] mx-auto py-10 mb-10">
-
-                    {/* Breadcrumbs */}
-                    <div className="mb-5">
-                        <nav aria-label="breadcrumb" className="w-full">
-
-                            <ol className="flex items-center gap-2 text-sm text-gray-500 font-nunito overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden">
-
-                                <li className="flex items-center gap-2">
-
-                                    <Link
-                                        href="/"
-                                        className="flex items-center gap-1.5 hover:text-primary transition-colors"
-                                    >
-                                        <svg
-                                            className="w-4 h-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={1.5}
-                                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"
-                                            />
-                                        </svg>
-
-                                        Home
-                                    </Link>
-
-                                    <span className="text-gray-400">/</span>
-
-                                    <span className="text-primary font-semibold">
-                                        Blogs
-                                    </span>
-
-                                </li>
-
-                            </ol>
-
-                        </nav>
-                    </div>
-
-                    {/* Heading */}
-                    <div className="max-w-2xl">
-
-                        <h1 className="text-3xl lg:text-4xl font-bold font-cormorant-garamond text-gray-900 mb-1.5 lg:mb-2">
-                            Explore Our Blogs
-                        </h1>
-
-                        <p className="text-gray-600 font-nunito text-sm lg:text-base leading-relaxed">
-                            Discover stories, travel guides, local experiences, culture,
-                            food, and everything that makes Braj special.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </section>
+  
+useEffect(() => {
+  fetchGetAPI(
+    API_ENDPOINTS.FETCH_BLOGS,
+    {
+      ...query,
+      page: 1,
+      limit: 100000,
+      sortKey: "createdAt",
+      sortOrder: "-1",
+    },
+    false,
+  );
+}, [query]);
 
 
-            {/* Blogs */}
-            <section className="min-h-screen py-12">
+  return (
+    <WebsiteLayout>
+      {/* Header */}
+      <section className="bg-primary/20">
+        <div className="px-5 sm:px-10 max-w-[1370px] mx-auto py-10 mb-10">
+          {/* Breadcrumbs */}
+          <div className="mb-5">
+            <nav aria-label="breadcrumb" className="w-full">
+              <ol className="flex items-center gap-2 text-sm text-gray-500 font-nunito overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden">
+                <li className="flex items-center gap-2">
+                  <Link
+                    href="/"
+                    className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"
+                      />
+                    </svg>
+                    Home
+                  </Link>
 
-                <div className="px-5 sm:px-10 max-w-[1370px] mx-auto">
+                  <span className="text-gray-400">/</span>
 
-                    {fetchingData ? (
+                  <span className="text-primary font-semibold">Blogs</span>
+                </li>
+              </ol>
+            </nav>
+          </div>
 
-                        <LoadingComponent />
+          {/* Heading */}
 
-                    ) : dataList?.length ? (
+          {/* Title, Description & Filters Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:items-end justify-between w-full">
+            {/* Blog Heading */}
+            <div className="grid max-w-xl">
+              <h1 className="text-3xl lg:text-4xl font-bold font-cormorant-garamond text-gray-900 mb-2">
+                Explore Our Blogs
+              </h1>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+              <p className="text-gray-600 font-nunito text-sm lg:text-base leading-relaxed">
+                Discover travel guides, sacred places, local culture, and
+                helpful tips for exploring Mathura, Vrindavan, and Braj Bhumi.
+              </p>
+            </div>
 
-                            {dataList.map((blog) => (
+            {/* Search and Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Search */}
+              <div className="relative border border-gray-400 rounded-lg bg-white">
+                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
 
-                                <article
-                                    key={blog._id}
-                                    className="group bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
-                                >
+                <input
+                  type="text"
+                  placeholder="Search blogs..."
+                  value={query.searchValue || ""}
+                  onChange={(e) =>
+                    setQuery({
+                      ...query,
+                      searchValue: e.target.value,
+                      page: 1,
+                    })
+                  }
+                  className="w-full bg-transparent text-gray-800 text-sm rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/60 font-nunito"
+                />
+              </div>
 
-                                    {/* Image */}
-                                    <Link href={`/blogs/${blog.slug}`}>
+              {/* Category */}
+              <div className="relative border border-gray-400 rounded-lg bg-white">
+                <FaFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
 
-                                        <div className="relative h-[240px] overflow-hidden">
+                <select
+                  value={query.category || ""}
+                  onChange={(e) =>
+                    setQuery({
+                      ...query,
+                      category: e.target.value,
+                      page: 1,
+                    })
+                  }
+                  className="w-full appearance-none bg-transparent text-gray-700 text-sm rounded-lg pl-10 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 font-nunito cursor-pointer"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Religious Places">Religious Places</option>
+                  <option value="Festivals">Festivals</option>
+                  <option value="Culture & Heritage">
+                    Culture &amp; Heritage
+                  </option>
+                  <option value="Food">Food</option>
+                  <option value="Travel Tips">Travel Tips</option>
+                </select>
 
-                                            <img
-                                                src={blog.image}
-                                                alt={blog.title}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
+                <FaChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 w-3 h-3" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                                            <div className="absolute top-4 left-4">
-
-                                                <span className="px-3 py-1.5 rounded-full bg-white/95 text-primary text-xs font-semibold font-nunito">
-                                                    {blog.category}
-                                                </span>
-
-                                            </div>
-
-                                        </div>
-
-                                    </Link>
-
-
-                                    {/* Content */}
-                                    <div className="p-5">
-
-                                        <div className="flex items-center justify-between gap-3 mb-3">
-
-                                            <span className="text-xs text-gray-500 font-nunito">
-                                                {blog.date}
-                                            </span>
-
-                                            <span className="text-xs text-gray-500 font-nunito">
-                                                By {blog.author}
-                                            </span>
-
-                                        </div>
-
-
-                                        <Link href={`/blogs/${blog.slug}`}>
-
-                                            <h2 className="text-xl font-bold font-cormorant-garamond text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
-                                                {blog.title}
-                                            </h2>
-
-                                        </Link>
-
-
-                                        <p className="mt-3 text-sm text-gray-600 font-nunito leading-relaxed line-clamp-3">
-                                            {blog.description}
-                                        </p>
-
-
-                                        <Link
-                                            href={`/blogs/${blog.slug}`}
-                                            className="inline-flex items-center gap-2 mt-5 text-sm font-semibold text-primary font-nunito hover:gap-3 transition-all"
-                                        >
-                                            Read More
-                                            <FaChevronRight size={11} />
-                                        </Link>
-
-                                    </div>
-
-                                </article>
-
-                            ))}
-
-                        </div>
-
-                    ) : (
-
-                        <NoDataComponent />
-
-                    )}
-
-                </div>
-
-            </section>
-
-        </WebsiteLayout>
-    );
+      {/* Blogs */}
+      <section className="min-h-screen">
+        <CardLayout
+          dataList={dataList}
+          loading={fetchingData}
+          callBackUrl="/blogs/"
+          type="blog"
+        />
+      </section>
+    </WebsiteLayout>
+  );
 }
