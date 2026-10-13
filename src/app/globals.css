@@ -115,6 +115,24 @@
   text-underline-offset: 0.2em;
 }
 
+.rich-text-content a {
+  color: #9a3412;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  transition: color 150ms ease;
+}
+
+.rich-text-content a:hover {
+  color: #7c2d12;
+}
+
+.rich-text-content a:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid #f59e0b;
+  outline-offset: 3px;
+}
+
 @media (max-width: 768px) {
   .rich-text-content {
     font-size: 1rem;

@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'react-toastify';
 
 export function useFetchPostAPI() {
@@ -202,7 +202,7 @@ export function useFetchDetailsAPI() {
     const router = useRouter();
     const [loading, setLoading] = useState(false)
 
-    async function fetchDetailsAPI(API_ENDPOINT, _id, setFormData, secured = true) {
+    const fetchDetailsAPI = useCallback(async (API_ENDPOINT, _id, setFormData, secured = true) => {
 
         try {
 
@@ -238,7 +238,7 @@ export function useFetchDetailsAPI() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
 
     return { fetchDetailsAPI, fetchingDetails: loading };
 }

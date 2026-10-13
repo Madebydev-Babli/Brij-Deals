@@ -28,6 +28,7 @@ export default function EditBlogPage() {
     const { fetchDetailsAPI, fetchingDetails } = useFetchDetailsAPI();
 
     const [formData, setFormData] = useState(initialFormData);
+    const [loadedBlogId, setLoadedBlogId] = useState(null);
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -35,10 +36,11 @@ export default function EditBlogPage() {
     }
 
     useEffect(() => {
-        fetchDetailsAPI(API_ENDPOINTS.FETCH_BLOGS, _id, setFormData);
-    }, [_id]);
+        fetchDetailsAPI(API_ENDPOINTS.FETCH_BLOGS, _id, setFormData)
+            .finally(() => setLoadedBlogId(_id));
+    }, [_id, fetchDetailsAPI]);
 
-    if (fetchingDetails) {
+    if (fetchingDetails || loadedBlogId !== _id) {
         return <LoadingComponent message="Loading Blog Details..." />;
     }
 
