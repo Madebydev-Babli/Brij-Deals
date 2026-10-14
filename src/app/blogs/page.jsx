@@ -3,7 +3,7 @@
 import WebsiteLayout from "@/client-components/WebsiteLayout";
 import Link from "next/link";
 import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFetchGetAPI } from "@/utility/custom-hooks";
 import { API_ENDPOINTS } from "@/utility/constants";
 import CardLayout from "@/server-components/CardsLayout";
@@ -11,6 +11,32 @@ import CardLayout from "@/server-components/CardsLayout";
 export default function Page() {
   const { fetchGetAPI, dataList, fetchingData, query, setQuery } =
     useFetchGetAPI();
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await fetch(API_ENDPOINTS.FETCH_BLOG_CATEGORIES.path, {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.status !== "success") {
+          throw new Error(result.message || "Failed to fetch categories");
+        }
+
+        setCategories(result.data || []);
+      } catch (error) {
+        console.error("Failed to fetch blog categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     fetchGetAPI(
@@ -116,17 +142,18 @@ export default function Page() {
                   }
                   className="w-full appearance-none bg-transparent text-gray-700 text-sm rounded-lg pl-10 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 font-nunito cursor-pointer"
                 >
-                  <option value="">All Categories</option>
-                  <option value="Travel">Travel</option>
-                  <option value="Religious Places">Religious Places</option>
-                  <option value="Festivals">Festivals</option>
-                  <option value="Culture & Heritage">
-                    Culture &amp; Heritage
+                  <option value="">
+                    {loadingCategories
+                      ? "Loading categories..."
+                      : "All Categories"}
                   </option>
-                  <option value="Food">Food</option>
-                  <option value="Travel Tips">Travel Tips</option>
-                </select>
 
+                  {categories.map((category) => (
+                    <option key={category._id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
                 <FaChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 w-3 h-3" />
               </div>
             </div>
