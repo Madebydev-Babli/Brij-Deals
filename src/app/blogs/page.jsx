@@ -12,21 +12,19 @@ export default function Page() {
   const { fetchGetAPI, dataList, fetchingData, query, setQuery } =
     useFetchGetAPI();
 
-  
-useEffect(() => {
-  fetchGetAPI(
-    API_ENDPOINTS.FETCH_BLOGS,
-    {
-      ...query,
-      page: 1,
-      limit: 100000,
-      sortKey: "createdAt",
-      sortOrder: "-1",
-    },
-    false,
-  );
-}, [query]);
-
+  useEffect(() => {
+    fetchGetAPI(
+      API_ENDPOINTS.FETCH_BLOGS,
+      {
+        ...query,
+        page: 1,
+        limit: 100000,
+        sortKey: "sno",
+        sortOrder: "1",
+      },
+      false,
+    );
+  }, [query]);
 
   return (
     <WebsiteLayout>

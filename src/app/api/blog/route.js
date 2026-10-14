@@ -399,80 +399,74 @@ export async function GET(req) {
       _id,
       slug,
       category = "",
-      sortOrder = -1,
+      sortOrder = "-1",
       sortKey = "createdAt",
-      limit = 10,
-      page = 1,
+      limit = "10",
+      page = "1",
       searchValue = "",
     } = Object.fromEntries(searchParams.entries());
 
-    const normalizedCategory =
-      typeof category === "string" ? category.trim() : "";
+    const normalizedCategory = category.trim();
+    const normalizedSearch = searchValue.trim();
 
-    const search = {
-      _id: mongoose.Types.ObjectId.isValid(_id) ? _id : undefined,
+    // Build the MongoDB filter.
+    const search = {};
 
-      slug: slug || undefined,
+    if (mongoose.Types.ObjectId.isValid(_id)) {
+      search._id = _id;
+    }
 
-      ...(normalizedCategory
-        ? {
-            category: {
-              $regex: new RegExp(
-                `^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-                "i",
-              ),
-            },
-          }
-        : {}),
+    if (slug) {
+      search.slug = slug;
+    }
 
-      $or: [
-        {
-          title: {
-            $regex: new RegExp(searchValue || ""),
-            $options: "i",
-          },
-        },
-        {
-          description: {
-            $regex: new RegExp(searchValue || ""),
-            $options: "i",
-          },
-        },
-        {
-          author: {
-            $regex: new RegExp(searchValue || ""),
-            $options: "i",
-          },
-        },
-        {
-          category: {
-            $regex: new RegExp(searchValue || ""),
-            $options: "i",
-          },
-        },
-      ],
-    };
+    // Filter by category when one is selected.
+    if (normalizedCategory) {
+      search.category = {
+        $regex: `^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+        $options: "i",
+      };
+    }
 
-    clearSearch(search);
+    // Search ONLY in blog titles.
+    if (normalizedSearch) {
+      search.title = {
+        $regex: normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        $options: "i",
+      };
+    }
 
-    const blogs = await BlogModel.find(search)
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit))
-      .sort({
-        [sortKey]: Number(sortOrder),
-      })
-      .lean();
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const pageSize = Math.max(1, Number(limit) || 10);
 
-    const totalFilteredData = await BlogModel.find(search).countDocuments();
+    // Allow only valid sort fields and directions.
+    const allowedSortKeys = ["sno", "createdAt", "title", "date"];
 
-    const totalData = await BlogModel.find({}).countDocuments();
+    const safeSortKey = allowedSortKeys.includes(sortKey)
+      ? sortKey
+      : "createdAt";
+
+    const parsedSortOrder = Number(sortOrder);
+    const safeSortOrder = parsedSortOrder === 1 ? 1 : -1;
+
+    const [blogs, totalFilteredData, totalData] = await Promise.all([
+      BlogModel.find(search)
+        .skip((pageNumber - 1) * pageSize)
+        .limit(pageSize)
+        .sort({ [safeSortKey]: safeSortOrder, _id: 1 })
+        .lean(),
+
+      BlogModel.countDocuments(search),
+
+      BlogModel.countDocuments({}),
+    ]);
 
     const extra = {
-      page: String(page),
-      limit: String(limit),
+      page: String(pageNumber),
+      limit: String(pageSize),
       totalFilteredData: String(totalFilteredData),
       totalData: String(totalData),
-      totalPages: String(Math.ceil(totalFilteredData / Number(limit))),
+      totalPages: String(Math.ceil(totalFilteredData / pageSize)),
     };
 
     return NextResponse.json(
@@ -482,15 +476,13 @@ export async function GET(req) {
         data: {
           data: blogs.map((item) => ({
             ...item,
-            image: item.image.url,
+            image: item.image?.url || "",
           })),
           extra,
         },
         error: null,
       },
-      {
-        status: 200,
-      },
+      { status: 200 },
     );
   } catch (error) {
     const errorMessage = await getErrorMessage(error);

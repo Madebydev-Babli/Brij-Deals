@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchPostAPI } from "@/utility/custom-hooks";
@@ -9,15 +9,6 @@ import {
   handleInputChange,
 } from "@/utility/utility-function";
 import RichTextEditor from "@/client-components/RichEditorText";
-
-const BLOG_CATEGORIES = [
-  "Travel",
-  "Religious Places",
-  "Festivals",
-  "Culture & Heritage",
-  "Food",
-  "Travel Tips",
-];
 
 const initialFormData = {
   sno: "",
@@ -34,6 +25,28 @@ const initialFormData = {
 export default function AddNewBlogPage() {
   const { fetchPostAPI, postingData } = useFetchPostAPI();
   const [formData, setFormData] = useState(initialFormData);
+
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await fetch("/api/blog-category");
+        const result = await response.json();
+
+        if (response.ok && result.status === "success") {
+          setCategories(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch blog categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+
+    fetchCategories();
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -124,12 +137,17 @@ export default function AddNewBlogPage() {
               onChange={(e) => handleInputChange(e, setFormData)}
               className="form-input"
               required
+              disabled={loadingCategories}
             >
-              <option value="">Select a category</option>
+              <option value="">
+                {loadingCategories
+                  ? "Loading categories..."
+                  : "Select a category"}
+              </option>
 
-              {BLOG_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              {categories.map((category) => (
+                <option key={category._id} value={category.name}>
+                  {category.name}
                 </option>
               ))}
             </select>
