@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -6,119 +6,266 @@ import Image from "next/image";
 import LoadingComponent from "@/server-components/LoadingComponent";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchDetailsAPI, useFetchPostAPI } from "@/utility/custom-hooks";
-import { handleImageChange, handleInputChange } from "@/utility/utility-function";
+import {
+  handleImageChange,
+  handleInputChange,
+} from "@/utility/utility-function";
 import RichTextEditor from "@/client-components/RichEditorText";
+const [categories, setCategories] = useState([]);
+const [loadingCategories, setLoadingCategories] = useState(true);
 
 const initialFormData = {
-    sno: '',
-    title: '',
-    slug: '',
-    image: '',
-    description: '',
-    content: '',
-    date: '',
-    author: '',
-    category: ''
+  sno: "",
+  title: "",
+  slug: "",
+  image: "",
+  description: "",
+  content: "",
+  date: "",
+  author: "",
+  category: "",
 };
 
 export default function EditBlogPage() {
+  const { _id } = useParams();
+  const { fetchPostAPI, postingData } = useFetchPostAPI();
+  const { fetchDetailsAPI, fetchingDetails } = useFetchDetailsAPI();
 
-    const { _id } = useParams();
-    const { fetchPostAPI, postingData } = useFetchPostAPI();
-    const { fetchDetailsAPI, fetchingDetails } = useFetchDetailsAPI();
+  const [formData, setFormData] = useState(initialFormData);
+  const [loadedBlogId, setLoadedBlogId] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-    const [formData, setFormData] = useState(initialFormData);
-    const [loadedBlogId, setLoadedBlogId] = useState(null);
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await fetch(API_ENDPOINTS.FETCH_BLOG_CATEGORIES.path, {
+          cache: "no-store",
+        });
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-        fetchPostAPI(API_ENDPOINTS.ADD_BLOG, formData, '/dashboard/blogs');
+        const result = await response.json();
+
+        if (!response.ok || result.status !== "success") {
+          throw new Error(result.message || "Failed to fetch categories");
+        }
+
+        setCategories(result.data || []);
+      } catch (error) {
+        console.error("Failed to fetch blog categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
     }
 
-    useEffect(() => {
-        fetchDetailsAPI(API_ENDPOINTS.FETCH_BLOGS, _id, setFormData)
-            .finally(() => setLoadedBlogId(_id));
-    }, [_id, fetchDetailsAPI]);
+    fetchCategories();
+  }, []);
 
-    if (fetchingDetails || loadedBlogId !== _id) {
-        return <LoadingComponent message="Loading Blog Details..." />;
-    }
+  async function handleSubmit(e) {
+    e.preventDefault();
+    fetchPostAPI(API_ENDPOINTS.ADD_BLOG, formData, "/dashboard/blogs");
+  }
 
-    return (
-        <section>
+  useEffect(() => {
+    fetchDetailsAPI(API_ENDPOINTS.FETCH_BLOGS, _id, setFormData).finally(() =>
+      setLoadedBlogId(_id),
+    );
+  }, [_id, fetchDetailsAPI]);
 
-            <form onSubmit={handleSubmit}>
+  if (fetchingDetails || loadedBlogId !== _id) {
+    return <LoadingComponent message="Loading Blog Details..." />;
+  }
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  return (
+    <section>
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="sno" className="form-label">
+              S.No.
+            </label>
+            <input
+              placeholder="Enter the serial number"
+              type="text"
+              id="sno"
+              name="sno"
+              value={formData.sno}
+              onChange={(e) => {
+                handleInputChange(e, setFormData);
+              }}
+              className="form-input"
+            />
+          </div>
 
-                    <div>
-                        <label htmlFor="sno" className="form-label">S.No.</label>
-                        <input placeholder="Enter the serial number" type="text" id="sno" name="sno" value={formData.sno} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+          <div>
+            <label htmlFor="title" className="form-label">
+              Title
+            </label>
+            <input
+              placeholder="Enter the blog title"
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={(e) => {
+                handleInputChange(e, setFormData);
+              }}
+              className="form-input"
+            />
+          </div>
 
-                    <div>
-                        <label htmlFor="title" className="form-label">Title</label>
-                        <input placeholder="Enter the blog title" type="text" id="title" name="title" value={formData.title} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+          <div>
+            <label htmlFor="slug" className="form-label">
+              Slug
+            </label>
+            <input
+              placeholder="Enter the blog slug"
+              type="text"
+              id="slug"
+              name="slug"
+              value={formData.slug}
+              onChange={(e) => {
+                handleInputChange(e, setFormData);
+              }}
+              className="form-input"
+            />
+          </div>
 
-                    <div>
-                        <label htmlFor="slug" className="form-label">Slug</label>
-                        <input placeholder="Enter the blog slug" type="text" id="slug" name="slug" value={formData.slug} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+          <div>
+            <label htmlFor="author" className="form-label">
+              Author
+            </label>
+            <input
+              placeholder="Enter the author name"
+              type="text"
+              id="author"
+              name="author"
+              value={formData.author}
+              onChange={(e) => {
+                handleInputChange(e, setFormData);
+              }}
+              className="form-input"
+            />
+          </div>
 
-                    <div>
-                        <label htmlFor="author" className="form-label">Author</label>
-                        <input placeholder="Enter the author name" type="text" id="author" name="author" value={formData.author} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+          <div>
+            <label htmlFor="category" className="form-label">
+              Category
+            </label>
 
-                    <div>
-                        <label htmlFor="category" className="form-label">Category</label>
-                        <input placeholder="Enter the category" type="text" id="category" name="category" value={formData.category} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+            <select
+              id="category"
+              name="category"
+              value={formData.category || ""}
+              onChange={(e) => handleInputChange(e, setFormData)}
+              className="form-input"
+              required
+            >
+              <option value="">
+                {loadingCategories
+                  ? "Loading categories..."
+                  : "Select a category"}
+              </option>
 
-                    <div>
-                        <label htmlFor="date" className="form-label">Date</label>
-                        <input type="date" id="date" name="date" value={formData.date} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                    </div>
+              {formData.category &&
+                !categories.some(
+                  (category) => category.name === formData.category,
+                ) && (
+                  <option value={formData.category}>
+                    {formData.category} (current category)
+                  </option>
+                )}
 
-                </div>
+              {categories.map((category) => (
+                <option key={category._id} value={category.name}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-                <div className="my-4">
-                    <label htmlFor="image" className="form-label">Image</label>
-                    <input type="file" id="image" name="image" accept="image/*" onChange={(e) => { handleImageChange(e, setFormData) }} className="form-input" />
-                    {formData.image && (
-                        <Image src={formData.image} alt="Blog Preview" width={120} height={120} className="mt-2 object-cover rounded-md" />
-                    )}
-                </div>
+          <div>
+            <label htmlFor="date" className="form-label">
+              Date
+            </label>
+            <input
+              type="date"
+              id="date"
+              name="date"
+              value={formData.date}
+              onChange={(e) => {
+                handleInputChange(e, setFormData);
+              }}
+              className="form-input"
+            />
+          </div>
+        </div>
 
-                <div className="mb-4">
-                    <label htmlFor="description" className="form-label">Short Description</label>
-                    <textarea placeholder="Enter the short description" id="description" name="description" value={formData.description} onChange={(e) => { handleInputChange(e, setFormData) }} rows="2" className="form-input"></textarea>
-                </div>
+        <div className="my-4">
+          <label htmlFor="image" className="form-label">
+            Image
+          </label>
+          <input
+            type="file"
+            id="image"
+            name="image"
+            accept="image/*"
+            onChange={(e) => {
+              handleImageChange(e, setFormData);
+            }}
+            className="form-input"
+          />
+          {formData.image && (
+            <Image
+              src={formData.image}
+              alt="Blog Preview"
+              width={120}
+              height={120}
+              className="mt-2 object-cover rounded-md"
+            />
+          )}
+        </div>
 
-            
-<div className="mb-4">
-    <label className="form-label">Content</label>
+        <div className="mb-4">
+          <label htmlFor="description" className="form-label">
+            Short Description
+          </label>
+          <textarea
+            placeholder="Enter the short description"
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={(e) => {
+              handleInputChange(e, setFormData);
+            }}
+            rows="2"
+            className="form-input"
+          ></textarea>
+        </div>
 
-    <RichTextEditor
-        value={formData.content || ""}
-        onChange={(value) =>
-            setFormData((prev) => ({
+        <div className="mb-4">
+          <label className="form-label">Content</label>
+
+          <RichTextEditor
+            value={formData.content || ""}
+            onChange={(value) =>
+              setFormData((prev) => ({
                 ...prev,
                 content: value,
-            }))
-        }
-    />
-</div>
+              }))
+            }
+          />
+        </div>
 
-                <div className="mt-6">
-                    <button type="submit" disabled={postingData} className="cursor-pointer text-white px-4 py-2 rounded-md bg-primary hover:opacity-90">
-                        {postingData ? 'Updating...' : 'Update Blog'}
-                    </button>
-                </div>
-
-            </form>
-
-        </section>
-    );
-};
+        <div className="mt-6">
+          <button
+            type="submit"
+            disabled={postingData}
+            className="cursor-pointer text-white px-4 py-2 rounded-md bg-primary hover:opacity-90"
+          >
+            {postingData ? "Updating..." : "Update Blog"}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
