@@ -21,16 +21,18 @@ export default function BlogCategoriesPage() {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function requestJSON(url, options = {}) {
+  async function requestJSON(url: string, options: RequestInit = {}) {
     const token = sessionStorage.getItem("token");
+    const headers = new Headers(options.headers || {});
+
+    headers.set("Content-Type", "application/json");
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
 
     const response = await fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      },
+      headers,
     });
 
     const result = await response.json();
@@ -46,13 +48,10 @@ export default function BlogCategoriesPage() {
     try {
       setLoading(true);
 
-      const result = await requestJSON(
-        API_ENDPOINTS.FETCH_BLOG_CATEGORIES.path,
-        {
-          method: "GET",
-          cache: "no-store",
-        },
-      );
+      const result = await requestJSON(API_ENDPOINTS.FETCH_BLOG_CATEGORIES.path, {
+        method: "GET",
+        cache: "no-store",
+      });
 
       setCategories(result.data || []);
     } catch (error) {
@@ -113,16 +112,13 @@ export default function BlogCategoriesPage() {
     try {
       setSaving(true);
 
-      const result = await requestJSON(
-        API_ENDPOINTS.UPDATE_BLOG_CATEGORY.path,
-        {
-          method: API_ENDPOINTS.UPDATE_BLOG_CATEGORY.method,
-          body: JSON.stringify({
-            id: editingCategory._id,
-            name,
-          }),
-        },
-      );
+      const result = await requestJSON(API_ENDPOINTS.UPDATE_BLOG_CATEGORY.path, {
+        method: API_ENDPOINTS.UPDATE_BLOG_CATEGORY.method,
+        body: JSON.stringify({
+          id: editingCategory._id,
+          name,
+        }),
+      });
 
       toast.success(result.message || "Category updated successfully");
       setEditingCategory(null);
@@ -141,9 +137,7 @@ export default function BlogCategoriesPage() {
     try {
       setDeleting(true);
 
-      const url = `${API_ENDPOINTS.DELETE_BLOG_CATEGORY.path}?id=${encodeURIComponent(
-        categoryToDelete._id,
-      )}`;
+      const url = `${API_ENDPOINTS.DELETE_BLOG_CATEGORY.path}?id=${encodeURIComponent(categoryToDelete._id)}`;
 
       const result = await requestJSON(url, {
         method: API_ENDPOINTS.DELETE_BLOG_CATEGORY.method,
@@ -169,10 +163,7 @@ export default function BlogCategoriesPage() {
             Use a clear name that describes the blog topic.
           </p>
 
-          <form
-            onSubmit={handleAddCategory}
-            className="mt-5 flex flex-col gap-3 sm:flex-row"
-          >
+          <form onSubmit={handleAddCategory} className="mt-5 flex flex-col gap-3 sm:flex-row">
             <input
               type="text"
               value={categoryName}
@@ -209,15 +200,10 @@ export default function BlogCategoriesPage() {
           </div>
 
           {loading ? (
-            <div className="p-10 text-center text-sm text-gray-500">
-              Loading categories...
-            </div>
+            <div className="p-10 text-center text-sm text-gray-500">Loading categories...</div>
           ) : categories.length === 0 ? (
             <div className="p-10 text-center">
-              <MdOutlineArticle
-                size={36}
-                className="mx-auto mb-3 text-gray-300"
-              />
+              <MdOutlineArticle size={36} className="mx-auto mb-3 text-gray-300" />
               <p className="font-semibold text-gray-700">No Categories Found</p>
             </div>
           ) : (
@@ -234,21 +220,12 @@ export default function BlogCategoriesPage() {
 
                 <tbody className="text-sm">
                   {categories.map((category, index) => (
-                    <tr
-                      key={category._id}
-                      className="border-b border-gray-200 transition-colors hover:bg-gray-50"
-                    >
-                      <td className="px-4 py-3 text-center">
-                        {String(index + 1).padStart(2, "0")}
-                      </td>
+                    <tr key={category._id} className="border-b border-gray-200 transition-colors hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center">{String(index + 1).padStart(2, "0")}</td>
 
-                      <td className="px-4 py-3 font-medium text-gray-800">
-                        {category.name}
-                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-800">{category.name}</td>
 
-                      <td className="px-4 py-3 text-gray-500">
-                        {category.slug}
-                      </td>
+                      <td className="px-4 py-3 text-gray-500">{category.slug}</td>
 
                       <td className="px-4 py-3">
                         <div className="mx-auto flex w-fit gap-2">
@@ -298,10 +275,7 @@ export default function BlogCategoriesPage() {
             </div>
 
             <form onSubmit={handleEditCategory}>
-              <label
-                htmlFor="edit-category-name"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="edit-category-name" className="mb-2 block text-sm font-medium text-gray-700">
                 Category name
               </label>
 

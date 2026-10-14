@@ -3,22 +3,16 @@ import { useCallback, useState } from 'react';
 import { toast } from 'react-toastify';
 
 export function useFetchPostAPI() {
-
     const [loading, setLoading] = useState(false);
-
     const router = useRouter();
 
     async function fetchPostAPI(API_ENDPOINT, formData, pathToRedirect, onSuccess = () => { }, secured = true) {
-
         try {
-
             const token = sessionStorage.getItem('token');
-            if (secured) {
-                if (!token) {
-                    toast.error("Session Expired", { position: "top-right" });
-                    router.push("/login");
-                    return;
-                }
+            if (secured && !token) {
+                toast.error("Session Expired", { position: "top-right" });
+                router.push("/login");
+                return;
             }
 
             setLoading(true);
@@ -26,7 +20,7 @@ export function useFetchPostAPI() {
             const response = await fetch(API_ENDPOINT.path, {
                 method: API_ENDPOINT.method,
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(formData),
@@ -35,33 +29,26 @@ export function useFetchPostAPI() {
             const data = await response.json();
 
             if (data.status === "success") {
-
                 onSuccess(data);
                 toast.success(data.message, { position: "top-right" });
                 if (pathToRedirect) router.push(pathToRedirect);
-
             } else {
                 toast.error(data.message, { position: "top-right" });
             }
-
         } catch (error) {
             toast.error(error.message, { position: "top-right" });
         } finally {
             setLoading(false);
         }
-    };
+    }
 
-    return { fetchPostAPI, postingData: loading }
+    return { fetchPostAPI, postingData: loading };
 }
 
 export function useFetchGetAPI() {
-
     const router = useRouter();
-
     const [dataList, setDataList] = useState([]);
-
-    const [loading, setLoading] = useState(false)
-
+    const [loading, setLoading] = useState(false);
     const [extra, setExtra] = useState({
         page: 1,
         limit: 10,
@@ -79,31 +66,28 @@ export function useFetchGetAPI() {
     });
 
     async function fetchGetAPI(API_ENDPOINT, extraQuery = {}, secured = true) {
-
         try {
-
             const token = sessionStorage.getItem('token');
-            if (secured) {
-                if (!token) {
-                    toast.error("Session Expired", { position: "top-right" });
-                    router.push("/login");
-                    return;
-                }
+            if (secured && !token) {
+                toast.error("Session Expired", { position: "top-right" });
+                router.push("/login");
+                return;
             }
 
             setLoading(true);
 
             const queryParams = new URLSearchParams({
-    ...query,
-    ...extraQuery,
-    sortKey: extraQuery.sortKey || query.sortKey || "createdAt",
-    sortOrder: extraQuery.sortOrder || query.sortOrder || "-1",
-});
+                ...query,
+                ...extraQuery,
+                sortKey: extraQuery.sortKey || query.sortKey || "createdAt",
+                sortOrder: extraQuery.sortOrder || query.sortOrder || "-1",
+            });
+
             const res = await fetch(`${API_ENDPOINT.path}?${queryParams.toString()}`, {
                 method: API_ENDPOINT.method,
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    'Content-Type': 'application/json',
                 },
             });
 
@@ -116,31 +100,25 @@ export function useFetchGetAPI() {
                     limit: data.data.extra.limit,
                     totalData: data.data.extra.totalData,
                     totalFilteredData: data.data.extra.totalFilteredData,
-                    totalPages: data.data.extra.totalPages
+                    totalPages: data.data.extra.totalPages,
                 });
             } else {
                 toast.error(data.message, { position: "top-right" });
             }
-
         } catch (error) {
             toast.error(error.message, { position: "top-right" });
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     return { fetchGetAPI, dataList, fetchingData: loading, query, setQuery, extra };
 }
 
 export function useFetchDeleteAPI() {
-
     const [showDeletePopup, setShowDeletePopup] = useState(false);
     const [loading, setLoading] = useState(false);
-
-    const [formData, setFormData] = useState({
-        _id: null
-    });
-
+    const [formData, setFormData] = useState({ _id: null });
     const router = useRouter();
 
     function handleDeleteClick(_id) {
@@ -154,16 +132,12 @@ export function useFetchDeleteAPI() {
     }
 
     async function fetchDeleteAPI(API_ENDPOINT, callBack, secured = true) {
-
         try {
-
             const token = sessionStorage.getItem('token');
-            if (secured) {
-                if (!token) {
-                    toast.error("Session Expired", { position: "top-right" });
-                    router.push("/login");
-                    return;
-                }
+            if (secured && !token) {
+                toast.error("Session Expired", { position: "top-right" });
+                router.push("/login");
+                return;
             }
 
             setLoading(true);
@@ -171,7 +145,7 @@ export function useFetchDeleteAPI() {
             const response = await fetch(API_ENDPOINT.path, {
                 method: API_ENDPOINT.method,
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(formData),
@@ -186,33 +160,27 @@ export function useFetchDeleteAPI() {
             } else {
                 toast.error(data.message, { position: "top-right" });
             }
-
         } catch (error) {
             toast.error(error.message, { position: "top-right" });
         } finally {
             setLoading(false);
         }
-    };
+    }
 
-    return { handleDeleteClick, cancelDelete, showDeletePopup, fetchDeleteAPI, deletingData: loading }
+    return { handleDeleteClick, cancelDelete, showDeletePopup, fetchDeleteAPI, deletingData: loading };
 }
 
 export function useFetchDetailsAPI() {
-
     const router = useRouter();
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(false);
 
     const fetchDetailsAPI = useCallback(async (API_ENDPOINT, _id, setFormData, secured = true) => {
-
         try {
-
             const token = sessionStorage.getItem('token');
-            if (secured) {
-                if (!token) {
-                    toast.error("Session Expired", { position: "top-right" });
-                    router.push("/login");
-                    return;
-                }
+            if (secured && !token) {
+                toast.error("Session Expired", { position: "top-right" });
+                router.push("/login");
+                return;
             }
 
             setLoading(true);
@@ -220,8 +188,8 @@ export function useFetchDetailsAPI() {
             const res = await fetch(`${API_ENDPOINT.path}?_id=${_id}`, {
                 method: API_ENDPOINT.method,
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    'Content-Type': 'application/json',
                 },
             });
 
@@ -232,7 +200,6 @@ export function useFetchDetailsAPI() {
             } else {
                 toast.error(data.message, { position: "top-right" });
             }
-
         } catch (error) {
             toast.error(error.message, { position: "top-right" });
         } finally {
