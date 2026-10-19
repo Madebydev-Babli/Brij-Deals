@@ -65,7 +65,7 @@ export function useFetchGetAPI() {
         sortOrder: "1",
     });
 
-    async function fetchGetAPI(API_ENDPOINT, extraQuery = {}, secured = true) {
+    const fetchGetAPI = useCallback(async (API_ENDPOINT, extraQuery = {}, secured = true) => {
         try {
             const token = sessionStorage.getItem('token');
             if (secured && !token) {
@@ -110,7 +110,7 @@ export function useFetchGetAPI() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [query, router]);
 
     return { fetchGetAPI, dataList, fetchingData: loading, query, setQuery, extra };
 }

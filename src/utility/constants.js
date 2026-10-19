@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   DELETE_RESTAURENT: { method: "DELETE", path: "/api/restaurent" },
 
   ADD_HOTEL: { method: "POST", path: "/api/hotel" },
+  UPDATE_HOTEL_SECTION: { method: "PATCH", path: "/api/hotel" },
   FETCH_HOTELS: { method: "GET", path: "/api/hotel" },
   DELETE_HOTEL: { method: "DELETE", path: "/api/hotel" },
 

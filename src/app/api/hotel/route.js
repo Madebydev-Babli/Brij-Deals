@@ -33,10 +33,51 @@ function normalizeExistingImage(image) {
     return null;
 }
 
+function hasOwn(value, key) {
+    return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function normalizeOffers(offers) {
+    if (!Array.isArray(offers)) throw Object.assign(new Error("Offers must be an array"), { statusCode: 400 });
+    return offers.map((offer) => ({
+        title: offer.title?.trim() || "",
+        description: offer.description?.trim() || "",
+        endDate: offer.endDate?.trim() || "",
+    }));
+}
+
+function normalizeAmenities(amenities) {
+    if (!Array.isArray(amenities)) throw Object.assign(new Error("Amenities must be an array"), { statusCode: 400 });
+    return amenities
+        .map((amenity) => ({
+            name: amenity.name?.trim() || amenity.title?.trim() || "",
+            icon: amenity.icon?.toString().trim() || "",
+        }))
+        .filter((amenity) => amenity.name);
+}
+
+function normalizeAttractions(attractions) {
+    if (!Array.isArray(attractions)) throw Object.assign(new Error("Attractions must be an array"), { statusCode: 400 });
+    return attractions.map((attraction) => ({
+        title: attraction.title?.trim() || "",
+        distance: attraction.distance?.trim() || "",
+        time: attraction.time?.trim() || "",
+        mode: attraction.mode?.trim() || "",
+    }));
+}
+
 async function uploadSingleImage(imageData, folder, maxSize = 1024 * 1024 * 2) {
     if (!imageData?.data) return null;
     const uploaded = await uploadImage(imageData.data, folder, maxSize);
-    return normalizeUploadedImage(uploaded);
+    const normalized = normalizeUploadedImage(uploaded);
+
+    if (!normalized) {
+        const error = new Error(uploaded?.message || "Image upload failed");
+        if (uploaded?.status === false) error.statusCode = 400;
+        throw error;
+    }
+
+    return normalized;
 }
 
 async function normalizeHotelGallery(gallery = []) {
@@ -134,6 +175,7 @@ export async function POST(req) {
 
         const decoded = await verifyToken(req);
         if (!decoded) {
+            await session.abortTransaction();
             return NextResponse.json({ status: "error", message: "Unauthorized access", data: null, error: "Unauthorized access" }, { status: 401 });
         }
 
@@ -256,35 +298,12 @@ export async function POST(req) {
                 }
             }
 
-            const normalizedRoomCategories = await normalizeRoomCategories(roomCategories);
-            const normalizedGallery = await normalizeHotelGallery(gallery);
-            const normalizedOffers = Array.isArray(offers) ? offers.map((offer) => ({ title: offer.title?.trim() || "", description: offer.description?.trim() || "", endDate: offer.endDate?.trim() || "" })) : [];
-            const normalizedAmenities = Array.isArray(amenities) ? amenities.map((amenity) => ({ name: amenity.name?.trim() || amenity.title?.trim() || "", icon: amenity.icon?.toString().trim() || "" })).filter((amenity) => amenity.name) : [];
-            const normalizedAttractions = Array.isArray(attractions) ? attractions.map((attraction) => ({ title: attraction.title?.trim() || "", distance: attraction.distance?.trim() || "", time: attraction.time?.trim() || "", mode: attraction.mode?.trim() || "" })) : [];
-
             const previousPublicIds = new Set(collectPublicIdsFromHotel(existingHotel));
-            const submittedPublicIds = new Set();
-
-            for (const room of normalizedRoomCategories) {
-                if (room.heroImage?.publicId) submittedPublicIds.add(room.heroImage.publicId);
-                for (const roomImage of room.gallery || []) {
-                    if (roomImage?.image?.publicId) submittedPublicIds.add(roomImage.image.publicId);
-                }
-            }
-
-            for (const item of normalizedGallery) {
-                if (item.image?.publicId) submittedPublicIds.add(item.image.publicId);
-            }
-
-            if (updatedImage?.publicId) submittedPublicIds.add(updatedImage.publicId);
-            if (updatedLogo?.publicId) submittedPublicIds.add(updatedLogo.publicId);
-            if (updatedBanner?.publicId) submittedPublicIds.add(updatedBanner.publicId);
-
-            for (const publicId of previousPublicIds) {
-                if (!submittedPublicIds.has(publicId)) {
-                    try { await deleteImage(publicId); } catch (error) { console.error("Failed to delete stale hotel image:", error); }
-                }
-            }
+            const normalizedRoomCategories = hasOwn(body, "roomCategories") ? await normalizeRoomCategories(roomCategories) : undefined;
+            const normalizedGallery = hasOwn(body, "gallery") ? await normalizeHotelGallery(gallery) : undefined;
+            const normalizedOffers = hasOwn(body, "offers") ? normalizeOffers(offers) : undefined;
+            const normalizedAmenities = hasOwn(body, "amenities") ? normalizeAmenities(amenities) : undefined;
+            const normalizedAttractions = hasOwn(body, "attractions") ? normalizeAttractions(attractions) : undefined;
 
             existingHotel.sno = updatedSno;
             existingHotel.slug = generatedSlug;
@@ -295,28 +314,35 @@ export async function POST(req) {
             existingHotel.banner = updatedBanner;
             existingHotel.location = location.trim();
             existingHotel.shortLocation = shortLocation.trim();
-            existingHotel.mapLink = mapLink?.trim() || "";
-            existingHotel.openingTime = openingTime?.trim() || "";
-            existingHotel.closingTime = closingTime?.trim() || "";
-            existingHotel.email = email?.trim() || "";
-            existingHotel.phone = phone?.trim() || "";
-            existingHotel.whatsapp = whatsapp?.trim() || "";
-            existingHotel.instagram = instagram?.trim() || "";
-            existingHotel.facebook = facebook?.trim() || "";
-            existingHotel.youtube = youtube?.trim() || "";
-            existingHotel.website = website?.trim() || "";
-            existingHotel.rating = Number(rating) || 0;
-            existingHotel.reviewCount = Number(reviewCount) || 0;
-            existingHotel.googleReview = googleReview?.trim() || "";
+            if (hasOwn(body, "mapLink")) existingHotel.mapLink = mapLink?.trim() || "";
+            if (hasOwn(body, "openingTime")) existingHotel.openingTime = openingTime?.trim() || "";
+            if (hasOwn(body, "closingTime")) existingHotel.closingTime = closingTime?.trim() || "";
+            if (hasOwn(body, "email")) existingHotel.email = email?.trim() || "";
+            if (hasOwn(body, "phone")) existingHotel.phone = phone?.trim() || "";
+            if (hasOwn(body, "whatsapp")) existingHotel.whatsapp = whatsapp?.trim() || "";
+            if (hasOwn(body, "instagram")) existingHotel.instagram = instagram?.trim() || "";
+            if (hasOwn(body, "facebook")) existingHotel.facebook = facebook?.trim() || "";
+            if (hasOwn(body, "youtube")) existingHotel.youtube = youtube?.trim() || "";
+            if (hasOwn(body, "website")) existingHotel.website = website?.trim() || "";
+            if (hasOwn(body, "rating")) existingHotel.rating = Number(rating) || 0;
+            if (hasOwn(body, "reviewCount")) existingHotel.reviewCount = Number(reviewCount) || 0;
+            if (hasOwn(body, "googleReview")) existingHotel.googleReview = googleReview?.trim() || "";
             existingHotel.startingPrice = Number(startingPrice);
-            existingHotel.roomCategories = normalizedRoomCategories;
-            existingHotel.offers = normalizedOffers;
-            existingHotel.amenities = normalizedAmenities;
-            existingHotel.attractions = normalizedAttractions;
-            existingHotel.gallery = normalizedGallery;
+            if (normalizedRoomCategories) existingHotel.roomCategories = normalizedRoomCategories;
+            if (normalizedOffers) existingHotel.offers = normalizedOffers;
+            if (normalizedAmenities) existingHotel.amenities = normalizedAmenities;
+            if (normalizedAttractions) existingHotel.attractions = normalizedAttractions;
+            if (normalizedGallery) existingHotel.gallery = normalizedGallery;
 
             await existingHotel.save({ session });
             await session.commitTransaction();
+
+            const submittedPublicIds = new Set(collectPublicIdsFromHotel(existingHotel));
+            for (const publicId of previousPublicIds) {
+                if (!submittedPublicIds.has(publicId)) {
+                    try { await deleteImage(publicId); } catch (error) { console.error("Failed to delete stale hotel image:", error); }
+                }
+            }
 
             revalidatePath("/categories/hotels-and-stays");
             revalidatePath(`/categories/hotels-and-stays/${generatedSlug}`);
@@ -361,9 +387,9 @@ export async function POST(req) {
         const uploadedBanner = await uploadSingleImage(banner, "braj_deals/hotels/banners");
         const roomCategoriesPayload = await normalizeRoomCategories(roomCategories);
         const galleryPayload = await normalizeHotelGallery(gallery);
-        const offersPayload = Array.isArray(offers) ? offers.map((offer) => ({ title: offer.title?.trim() || "", description: offer.description?.trim() || "", endDate: offer.endDate?.trim() || "" })) : [];
-        const amenitiesPayload = Array.isArray(amenities) ? amenities.map((amenity) => ({ name: amenity.name?.trim() || amenity.title?.trim() || "", icon: amenity.icon?.toString().trim() || "" })).filter((amenity) => amenity.name) : [];
-        const attractionsPayload = Array.isArray(attractions) ? attractions.map((attraction) => ({ title: attraction.title?.trim() || "", distance: attraction.distance?.trim() || "", time: attraction.time?.trim() || "", mode: attraction.mode?.trim() || "" })) : [];
+        const offersPayload = normalizeOffers(offers);
+        const amenitiesPayload = normalizeAmenities(amenities);
+        const attractionsPayload = normalizeAttractions(attractions);
 
         if (!uploadedImage || !uploadedLogo || !uploadedBanner) {
             await session.abortTransaction();
@@ -416,7 +442,99 @@ export async function POST(req) {
         }
 
         const errorMessage = await getErrorMessage(error, session);
-        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: 500 });
+        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: error.statusCode || 500 });
+    } finally {
+        if (session) session.endSession();
+    }
+}
+
+export async function PATCH(req) {
+    let session = null;
+
+    try {
+        await connectToDatabase();
+        session = await mongoose.startSession();
+        session.startTransaction();
+
+        const decoded = await verifyToken(req);
+        if (!decoded) {
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Unauthorized access", data: null, error: "Unauthorized access" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { _id } = body;
+        const fields = ["instagram", "facebook", "youtube", "website", "offers", "roomCategories", "amenities", "attractions", "gallery"];
+        const submittedFields = fields.filter((field) => hasOwn(body, field));
+
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Valid Hotel ID is required", data: null, error: "Valid Hotel ID is required" }, { status: 400 });
+        }
+
+        if (!submittedFields.length || Object.keys(body).some((field) => field !== "_id" && !fields.includes(field))) {
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Invalid Hotel section update", data: null, error: "Invalid Hotel section update" }, { status: 400 });
+        }
+
+        for (const field of ["instagram", "facebook", "youtube", "website"]) {
+            if (hasOwn(body, field) && typeof body[field] !== "string") {
+                await session.abortTransaction();
+                return NextResponse.json({ status: "error", message: `${field} must be a string`, data: null, error: `${field} must be a string` }, { status: 400 });
+            }
+        }
+
+        for (const field of ["offers", "roomCategories", "amenities", "attractions", "gallery"]) {
+            if (hasOwn(body, field) && !Array.isArray(body[field])) {
+                await session.abortTransaction();
+                return NextResponse.json({ status: "error", message: `${field} must be an array`, data: null, error: `${field} must be an array` }, { status: 400 });
+            }
+        }
+
+        const hotel = await HotelModel.findById(_id).session(session);
+        if (!hotel) {
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Hotel not found", data: null, error: "Hotel not found" }, { status: 404 });
+        }
+
+        const previousPublicIds = new Set(collectPublicIdsFromHotel(hotel));
+
+        for (const field of ["instagram", "facebook", "youtube", "website"]) {
+            if (hasOwn(body, field)) hotel[field] = body[field]?.trim() || "";
+        }
+
+        if (hasOwn(body, "offers")) hotel.offers = normalizeOffers(body.offers);
+        if (hasOwn(body, "roomCategories")) hotel.roomCategories = await normalizeRoomCategories(body.roomCategories);
+        if (hasOwn(body, "amenities")) hotel.amenities = normalizeAmenities(body.amenities);
+        if (hasOwn(body, "attractions")) hotel.attractions = normalizeAttractions(body.attractions);
+        if (hasOwn(body, "gallery")) hotel.gallery = await normalizeHotelGallery(body.gallery);
+
+        await hotel.save({ session });
+        await session.commitTransaction();
+
+        const submittedPublicIds = new Set(collectPublicIdsFromHotel(hotel));
+        for (const publicId of previousPublicIds) {
+            if (!submittedPublicIds.has(publicId)) {
+                try {
+                    await deleteImage(publicId);
+                } catch (error) {
+                    console.error("Failed to delete stale hotel image:", error);
+                }
+            }
+        }
+
+        revalidatePath("/categories/hotels-and-stays");
+        revalidatePath(`/categories/hotels-and-stays/${hotel.slug}`);
+        return NextResponse.json({ status: "success", message: "Hotel section updated successfully", data: { data: [hotel] }, error: null }, { status: 200 });
+    } catch (error) {
+        try {
+            if (session) await session.abortTransaction();
+        } catch (abortError) {
+            console.error("Hotel section update abort failed:", abortError);
+        }
+
+        const errorMessage = await getErrorMessage(error, session);
+        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: error.statusCode || 500 });
     } finally {
         if (session) session.endSession();
     }
