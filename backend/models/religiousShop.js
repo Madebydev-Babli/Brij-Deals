@@ -10,6 +10,7 @@ const imageSchema = new mongoose.Schema(
 
 const attractionSchema = new mongoose.Schema(
     {
+        sno: { type: Number, min: 1 },
         title: { type: String, trim: true, default: "" },
         distance: { type: String, trim: true, default: "" },
         time: { type: String, trim: true, default: "" },
@@ -21,6 +22,7 @@ const attractionSchema = new mongoose.Schema(
 const productSchema = new mongoose.Schema(
     {
         _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+        sno: { type: Number, min: 1 },
         title: { type: String, trim: true, default: "" },
         description: { type: String, trim: true, default: "" },
         price: { type: String, trim: true, default: "" },

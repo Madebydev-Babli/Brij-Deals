@@ -1,16 +1,25 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { FaBoxOpen, FaInfoCircle, FaMapMarkerAlt, FaShareAlt } from "react-icons/fa";
+import ReligiousShopBasicInfoForm from "@/client-components/ReligiousShopBasicInfoForm";
+import {
+    ReligiousShopAttractionsTab,
+    ReligiousShopProductsTab,
+    ReligiousShopSocialMediaTab,
+} from "@/client-components/ReligiousShopTabs";
+import Tabs from "@/server-components/Tabs";
 import LoadingComponent from "@/server-components/LoadingComponent";
 import NoDataComponent from "@/server-components/NoDataComponent";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchDetailsAPI, useFetchPostAPI } from "@/utility/custom-hooks";
-import { ReligiousShopForm, initialFormData } from "../create/page";
+import { initialReligiousShopFormData } from "@/utility/religious-shop-data";
 
 function normalizeReligiousShopData(shop) {
     return {
-        ...initialFormData,
+        ...initialReligiousShopFormData,
+        ...shop,
         _id: shop?._id || "",
         sno: shop?.sno ?? "",
         slug: shop?.slug || "",
@@ -37,23 +46,29 @@ function normalizeReligiousShopData(shop) {
         startingPrice: shop?.startingPrice ?? "",
         products: Array.isArray(shop?.products)
             ? shop.products.map((product) => ({
-                    _id: product?._id || "",
-                    title: product?.title || "",
-                    description: product?.description || "",
-                    price: product?.price ?? "",
-                    originalPrice: product?.originalPrice ?? "",
-                    offer: product?.offer ?? "",
-                    image: product?.image || "",
-                    highlights: Array.isArray(product?.highlights) ? product.highlights.map((highlight) => highlight || "") : [],
-                }))
+                ...product,
+                _id: product?._id || "",
+                sno: product?.sno ?? "",
+                title: product?.title || "",
+                description: product?.description || "",
+                price: product?.price ?? "",
+                originalPrice: product?.originalPrice ?? "",
+                offer: product?.offer ?? "",
+                image: product?.image || "",
+                highlights: Array.isArray(product?.highlights)
+                    ? product.highlights.map((highlight) => highlight || "")
+                    : [],
+            }))
             : [],
         attractions: Array.isArray(shop?.attractions)
             ? shop.attractions.map((attraction) => ({
-                    title: attraction?.title || "",
-                    distance: attraction?.distance || "",
-                    time: attraction?.time || "",
-                    mode: attraction?.mode || "",
-                }))
+                ...attraction,
+                sno: attraction?.sno ?? "",
+                title: attraction?.title || "",
+                distance: attraction?.distance || "",
+                time: attraction?.time || "",
+                mode: attraction?.mode || "",
+            }))
             : [],
     };
 }
@@ -62,20 +77,42 @@ export default function EditReligiousShopPage() {
     const { id } = useParams();
     const { fetchPostAPI, postingData } = useFetchPostAPI();
     const { fetchDetailsAPI, fetchingDetails } = useFetchDetailsAPI();
-    const [formData, setFormData] = useState(initialFormData);
+    const [formData, setFormData] = useState(initialReligiousShopFormData);
     const [requestedShopId, setRequestedShopId] = useState(null);
+    const [activeTab, setActiveTab] = useState("basic-info");
+
+    const tabs = [
+        { id: "basic-info", label: "Basic Info", icon: <FaInfoCircle className="mr-2 inline" /> },
+        { id: "social-media", label: "Social Media", icon: <FaShareAlt className="mr-2 inline" /> },
+        { id: "products", label: "Products", icon: <FaBoxOpen className="mr-2 inline" /> },
+        { id: "attractions", label: "Attractions", icon: <FaMapMarkerAlt className="mr-2 inline" /> },
+    ];
 
     useEffect(() => {
         if (!id) return;
         fetchDetailsAPI(API_ENDPOINTS.FETCH_RELIGIOUS_SHOPS, id, (shop) => {
             setFormData(normalizeReligiousShopData(shop));
         }).finally(() => setRequestedShopId(id));
-    }, [id]);
+    }, [fetchDetailsAPI, id]);
 
-    function handleSubmit(e) {
-        e.preventDefault();
+    function saveShop(changes, onSuccess) {
         if (!formData._id) return;
-        fetchPostAPI(API_ENDPOINTS.ADD_RELIGIOUS_SHOP, formData, "/dashboard/religious-shops");
+        const updatedShop = { ...formData, ...changes, _id: id };
+        fetchPostAPI(API_ENDPOINTS.ADD_RELIGIOUS_SHOP, updatedShop, null, (response) => {
+            const savedShop = response?.data?.data?.[0];
+            if (!savedShop?._id) return;
+            setFormData(normalizeReligiousShopData(savedShop));
+            onSuccess?.();
+        });
+    }
+
+    function handleBasicInfoSubmit(event) {
+        event.preventDefault();
+        saveShop(formData);
+    }
+
+    function handleSectionSave(changes, onSuccess) {
+        saveShop(changes, onSuccess);
     }
 
     if (fetchingDetails || (id && requestedShopId !== id)) {
@@ -87,12 +124,39 @@ export default function EditReligiousShopPage() {
     }
 
     return (
-        <ReligiousShopForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleSubmit}
-            postingData={postingData}
-            submitLabel="Update Religious Shop"
-        />
+        <>
+            <Tabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+            {activeTab === "basic-info" && (
+                <ReligiousShopBasicInfoForm
+                    key={`${formData._id}-${formData.updatedAt || ""}`}
+                    formData={formData}
+                    setFormData={setFormData}
+                    onSubmit={handleBasicInfoSubmit}
+                    postingData={postingData}
+                    submitLabel="Save Basic Info"
+                />
+            )}
+            {activeTab === "social-media" && (
+                <ReligiousShopSocialMediaTab
+                    shop={formData}
+                    onSave={handleSectionSave}
+                    saving={postingData}
+                />
+            )}
+            {activeTab === "products" && (
+                <ReligiousShopProductsTab
+                    shop={formData}
+                    onSave={handleSectionSave}
+                    saving={postingData}
+                />
+            )}
+            {activeTab === "attractions" && (
+                <ReligiousShopAttractionsTab
+                    shop={formData}
+                    onSave={handleSectionSave}
+                    saving={postingData}
+                />
+            )}
+        </>
     );
 }

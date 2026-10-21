@@ -7,10 +7,16 @@ import { RiDeleteBin7Line } from "react-icons/ri";
 import ConfirmationPopup from "@/server-components/ConfirmationPopup";
 import NoDataComponent from "@/server-components/NoDataComponent";
 import PaginationSection from "@/server-components/PaginationSection";
+import { toast } from "react-toastify";
 import { handleImageChange, handleInputChange } from "@/utility/utility-function";
 
 function imageUrl(image) {
     return typeof image === "string" ? image : image?.data || image?.url || "";
+}
+
+function getFormValue(record, field) {
+    const value = record[field.storageKey || field.name];
+    return field.toFormValue ? field.toFormValue(value, record) : value ?? "";
 }
 
 function Field({ field, value, setFormData }) {
@@ -20,14 +26,21 @@ function Field({ field, value, setFormData }) {
                 <label htmlFor="sno" className="form-label">S.No.</label>
                 <input
                     placeholder="Enter the serial number"
-                    type="text"
+                    type={field.type || "text"}
                     id="sno"
                     name="sno"
                     value={value ?? ""}
+                    min={field.min}
+                    step={field.step}
+                    required={field.required}
                     onChange={(event) => handleInputChange(event, setFormData)}
                     className="form-input"
                 />
-                <p className="gray-600 text-xs">Leave this field empty if you want to add the Hotel in the last</p>
+                {field.helperText !== "" && (
+                    <p className="gray-600 text-xs">
+                        {field.helperText || "Leave this field empty if you want to add the Hotel in the last"}
+                    </p>
+                )}
             </div>
         );
     }
@@ -36,7 +49,7 @@ function Field({ field, value, setFormData }) {
         return (
             <div>
                 <label htmlFor={field.name} className="form-label">{field.label}</label>
-                <select id={field.name} name={field.name} value={value ?? ""} onChange={(event) => handleInputChange(event, setFormData)} className="form-input">
+                <select id={field.name} name={field.name} value={value ?? ""} required={field.required} onChange={(event) => handleInputChange(event, setFormData)} className="form-input">
                     <option value="">{field.placeholder}</option>
                     {field.options.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -56,6 +69,7 @@ function Field({ field, value, setFormData }) {
                     name={field.name}
                     value={value ?? ""}
                     rows="2"
+                    required={field.required}
                     onChange={(event) => handleInputChange(event, setFormData)}
                     className="form-input"
                 />
@@ -73,6 +87,7 @@ function Field({ field, value, setFormData }) {
                     id={field.name}
                     name={field.name}
                     accept="image/*"
+                    required={field.required && !src}
                     onChange={(event) => handleImageChange(event, setFormData)}
                     className="form-input"
                 />
@@ -90,6 +105,9 @@ function Field({ field, value, setFormData }) {
                 id={field.name}
                 name={field.name}
                 value={value ?? ""}
+                required={field.required}
+                min={field.min}
+                step={field.step}
                 onChange={(event) => handleInputChange(event, setFormData)}
                 className="form-input"
             />
@@ -123,7 +141,9 @@ function SerialSortButton({ query, setQuery, sortKey = "sno", children = "S.N." 
 }
 
 function SerialNumber({ value }) {
-    return value < 10 ? `0${value}` : value;
+    return value !== undefined && value !== null && value !== "" && value < 10
+        ? `0${value}`
+        : value || "N/A";
 }
 
 export default function CollectionTabEditor({
@@ -137,6 +157,8 @@ export default function CollectionTabEditor({
     columns,
     formLayout,
     sortFields = [],
+    persistSerialNumber = false,
+    validate,
     getMobileImage,
     getMobileIcon,
 }) {
@@ -162,14 +184,29 @@ export default function CollectionTabEditor({
                 if (!search) return true;
                 const formRecord = Object.fromEntries(fields.map((field) => [
                     field.name,
-                    field.name === "sno" ? index + 1 : record[field.storageKey || field.name],
+                    field.name === "sno" && !persistSerialNumber
+                        ? index + 1
+                        : getFormValue(record, field) ??
+                            (field.name === "sno" && !persistSerialNumber ? index + 1 : ""),
                 ]));
-                return [String(index + 1), ...fields.map((field) => String(formRecord?.[field.name] ?? ""))]
+                const serialNumber = persistSerialNumber
+                    ? String(formRecord.sno ?? "")
+                    : String(index + 1);
+                return [serialNumber, ...fields.map((field) => String(formRecord?.[field.name] ?? ""))]
                     .some((value) => value.toLowerCase().includes(search));
             })
             .sort((left, right) => {
                 const direction = query.sortOrder === "-1" ? -1 : 1;
-                if (query.sortKey === "sno") return direction * (left.index - right.index);
+                if (query.sortKey === "sno") {
+                    if (!persistSerialNumber) return direction * (left.index - right.index);
+                    const leftSno = Number(left.record.sno);
+                    const rightSno = Number(right.record.sno);
+                    const leftHasSno = Number.isFinite(leftSno) && leftSno > 0;
+                    const rightHasSno = Number.isFinite(rightSno) && rightSno > 0;
+                    if (leftHasSno !== rightHasSno) return leftHasSno ? -1 : 1;
+                    if (!leftHasSno) return left.index - right.index;
+                    return direction * (leftSno - rightSno);
+                }
                 const sortField = sortFields.find((field) => field.name === query.sortKey);
                 if (!sortField) return 0;
                 return direction * String(sortField.getValue(left.record) ?? "").localeCompare(
@@ -178,7 +215,7 @@ export default function CollectionTabEditor({
                     { numeric: true },
                 );
             });
-    }, [fields, query.searchValue, query.sortKey, query.sortOrder, records, sortFields]);
+    }, [fields, persistSerialNumber, query.searchValue, query.sortKey, query.sortOrder, records, sortFields]);
 
     const extra = {
         page: query.page,
@@ -191,7 +228,10 @@ export default function CollectionTabEditor({
 
     function beginAdd() {
         setEditIndex(null);
-        setFormData(Object.fromEntries(fields.map((field) => [field.name, field.initialValue ?? ""])));
+        setFormData(Object.fromEntries(fields.map((field) => [
+            field.name,
+            field.initialValue ?? "",
+        ])));
         setActiveView("add");
     }
 
@@ -200,7 +240,10 @@ export default function CollectionTabEditor({
         setEditIndex(index);
         setFormData(Object.fromEntries(fields.map((field) => [
             field.name,
-            field.name === "sno" ? index + 1 : record[field.storageKey || field.name],
+            field.name === "sno" && !persistSerialNumber
+                ? index + 1
+                : getFormValue(record, field) ??
+                    (field.name === "sno" && !persistSerialNumber ? index + 1 : ""),
         ])));
         setActiveView("edit");
     }
@@ -211,20 +254,39 @@ export default function CollectionTabEditor({
 
     function submitForm(event) {
         event.preventDefault();
+        if (validate) {
+            const validationError = validate(formData, activeView, records, editIndex);
+            if (validationError) {
+                toast.error(validationError, { position: "top-right" });
+                return;
+            }
+        }
+
         const existingRecord = editIndex === null ? {} : records[editIndex];
         const updatedRecord = fields.reduce((record, field) => {
-            if (field.name !== "sno") record[field.storageKey || field.name] = formData[field.name];
+            if (field.name === "sno" && persistSerialNumber) {
+                record.sno = Number(formData.sno);
+            } else if (field.name !== "sno") {
+                const value = formData[field.name];
+                record[field.storageKey || field.name] = field.fromFormValue
+                    ? field.fromFormValue(value, record)
+                    : value;
+            }
             return record;
         }, { ...existingRecord });
-        const nextRecords = editIndex === null
+        let nextRecords = editIndex === null
             ? [...records, updatedRecord]
             : records.map((record, index) => index === editIndex ? updatedRecord : record);
 
-        const selectedIndex = editIndex ?? nextRecords.length - 1;
-        const requestedPosition = formData.sno === "" ? nextRecords.length - 1 : Number(formData.sno) - 1;
-        if (Number.isFinite(requestedPosition)) {
-            const [selectedRecord] = nextRecords.splice(selectedIndex, 1);
-            nextRecords.splice(Math.max(0, Math.min(requestedPosition, nextRecords.length)), 0, selectedRecord);
+        if (persistSerialNumber) {
+            nextRecords = nextRecords.sort((left, right) => Number(left.sno) - Number(right.sno));
+        } else {
+            const selectedIndex = editIndex ?? nextRecords.length - 1;
+            const requestedPosition = formData.sno === "" ? nextRecords.length - 1 : Number(formData.sno) - 1;
+            if (Number.isFinite(requestedPosition)) {
+                const [selectedRecord] = nextRecords.splice(selectedIndex, 1);
+                nextRecords.splice(Math.max(0, Math.min(requestedPosition, nextRecords.length)), 0, selectedRecord);
+            }
         }
 
         persist(nextRecords, () => {
@@ -245,7 +307,9 @@ export default function CollectionTabEditor({
     }
 
     function renderCell(column, record, index) {
-        if (column.name === "sno") return <SerialNumber value={index + 1} />;
+        if (column.name === "sno") {
+            return <SerialNumber value={persistSerialNumber ? record.sno : index + 1} />;
+        }
         const value = column.getValue ? column.getValue(record) : record[column.storageKey || column.name];
         return column.render ? column.render(record, value) : (value || "N/A");
     }
@@ -352,7 +416,7 @@ export default function CollectionTabEditor({
                                 <div key={record._id || index} className="flex flex-col justify-between rounded-md border border-gray-300 p-5">
                                     <div>
                                         {getMobileImage?.(record) && <img src={getMobileImage(record)} alt={record.title || record.label || title} className="mb-4 h-auto w-full rounded-md" />}
-                                        <h2 className="text-xl font-semibold">S.N: <SerialNumber value={index + 1} /></h2>
+                                        <h2 className="text-xl font-semibold">S.N: <SerialNumber value={persistSerialNumber ? record.sno : index + 1} /></h2>
                                         {getMobileIcon && (
                                             <div className="mb-4 flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4">
                                                 {getMobileIcon(record)}

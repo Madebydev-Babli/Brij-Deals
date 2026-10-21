@@ -69,12 +69,18 @@ async function uploadGalleryImages(gallery = []) {
 
       if (uploadedImage) {
         uploadedGallery.push({
+          ...(item.sno !== undefined && item.sno !== null && item.sno !== ""
+            ? { sno: Number(item.sno) }
+            : {}),
           image: uploadedImage,
           title: item.title?.trim() || "",
         });
       }
     } else if (item.image.url && item.image.publicId) {
       uploadedGallery.push({
+        ...(item.sno !== undefined && item.sno !== null && item.sno !== ""
+          ? { sno: Number(item.sno) }
+          : {}),
         image: {
           url: item.image.url,
           publicId: item.image.publicId,
@@ -185,6 +191,55 @@ export async function POST(req) {
         { status: "error", message: "Closing time is required" },
         { status: 400 },
       );
+    }
+
+    for (const [label, records] of [
+      ["Aarti Timing", artiTimings],
+      ["Attraction", attractions],
+      ["Visitor Tip", visitorTips],
+    ]) {
+      if (!Array.isArray(records)) continue;
+      const serialNumbers = new Set();
+      for (const record of records) {
+        if (record?.sno === undefined || record.sno === null || record.sno === "") continue;
+        const serialNumber = Number(record.sno);
+        if (!Number.isInteger(serialNumber) || serialNumber < 1) {
+          return NextResponse.json(
+            { status: "error", message: `Invalid ${label} serial number` },
+            { status: 400 },
+          );
+        }
+        if (serialNumbers.has(serialNumber)) {
+          return NextResponse.json(
+            { status: "error", message: `${label} serial numbers must be unique` },
+            { status: 400 },
+          );
+        }
+        serialNumbers.add(serialNumber);
+      }
+    }
+
+    for (const item of Array.isArray(gallery) ? gallery : []) {
+      if (!item?.image) continue;
+
+      const hasSerialNumber =
+        item.sno !== undefined && item.sno !== null && item.sno !== "";
+      if (item.image.data && !hasSerialNumber) {
+        return NextResponse.json(
+          { status: "error", message: "Gallery serial number is required" },
+          { status: 400 },
+        );
+      }
+
+      if (hasSerialNumber) {
+        const serialNumber = Number(item.sno);
+        if (!Number.isInteger(serialNumber) || serialNumber < 1) {
+          return NextResponse.json(
+            { status: "error", message: "Invalid gallery serial number" },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     const generatedSlug = createSlug(title) || createSlug(receivedSlug);
@@ -298,6 +353,9 @@ export async function POST(req) {
 
           if (uploadedImage) {
             const uploadedGalleryItem = {
+              ...(item.sno !== undefined && item.sno !== null && item.sno !== ""
+                ? { sno: Number(item.sno) }
+                : {}),
               image: normalizeUploadedImage(uploadedImage),
               title: item.title?.trim() || "",
             };
@@ -307,6 +365,9 @@ export async function POST(req) {
           }
         } else if (item.image.url && item.image.publicId) {
           const existingGalleryItem = {
+            ...(item.sno !== undefined && item.sno !== null && item.sno !== ""
+              ? { sno: Number(item.sno) }
+              : {}),
             image: {
               url: item.image.url,
               publicId: item.image.publicId,

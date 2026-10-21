@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 const artiTimingSchema = new mongoose.Schema(
     {
+        sno: {
+            type: Number,
+            min: 1,
+        },
         name: {
             type: String,
             required: [true, "Aarti name is required"],
@@ -18,6 +22,10 @@ const artiTimingSchema = new mongoose.Schema(
 
 const gallerySchema = new mongoose.Schema(
     {
+        sno: {
+            type: Number,
+            min: 1,
+        },
         image: {
             url: {
                 type: String,
@@ -38,6 +46,10 @@ const gallerySchema = new mongoose.Schema(
 
 const attractionSchema = new mongoose.Schema(
     {
+        sno: {
+            type: Number,
+            min: 1,
+        },
         title: {
             type: String,
             required: [true, "Attraction title is required"],
@@ -61,6 +73,10 @@ const attractionSchema = new mongoose.Schema(
 
 const visitorTipSchema = new mongoose.Schema(
     {
+        sno: {
+            type: Number,
+            min: 1,
+        },
         icon: {
             type: String,
             trim: true,

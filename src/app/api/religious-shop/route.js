@@ -53,6 +53,9 @@ async function normalizeProducts(products = []) {
 
         normalized.push({
             _id: item._id || undefined,
+            ...(item.sno !== undefined && item.sno !== null && item.sno !== ""
+                ? { sno: Number(item.sno) }
+                : {}),
             title: item.title?.trim() || "",
             description: item.description?.trim() || "",
             price: item.price?.toString().trim() || "",
@@ -72,11 +75,31 @@ function normalizeAttractions(attractions = []) {
     if (!Array.isArray(attractions)) return [];
 
     return attractions.map((item) => ({
+        ...(item?.sno !== undefined && item.sno !== null && item.sno !== ""
+            ? { sno: Number(item.sno) }
+            : {}),
         title: item?.title?.trim() || "",
         distance: item?.distance?.trim() || "",
         time: item?.time?.trim() || "",
         mode: item?.mode?.trim() || "",
     })).filter((item) => item.title || item.distance || item.time || item.mode);
+}
+
+function validateNestedSerialNumbers(label, records) {
+    if (!Array.isArray(records)) return `${label} must be a list`;
+    const serialNumbers = new Set();
+    for (const record of records) {
+        if (record?.sno === undefined || record.sno === null || record.sno === "") continue;
+        const serialNumber = Number(record.sno);
+        if (!Number.isInteger(serialNumber) || serialNumber < 1) {
+            return `Invalid ${label} serial number`;
+        }
+        if (serialNumbers.has(serialNumber)) {
+            return `${label} serial numbers must be unique`;
+        }
+        serialNumbers.add(serialNumber);
+    }
+    return null;
 }
 
 function collectPublicIds(shop) {
@@ -154,6 +177,16 @@ export async function POST(req) {
 
         if (startingPrice === undefined || startingPrice === null || startingPrice === "") {
             return NextResponse.json({ status: "error", message: "Starting Price is required", data: null, error: "Starting Price is required" }, { status: 400 });
+        }
+
+        for (const [label, records] of [["Product", products], ["Attraction", attractions]]) {
+            const validationError = validateNestedSerialNumbers(label, records);
+            if (validationError) {
+                return NextResponse.json(
+                    { status: "error", message: validationError, data: null, error: validationError },
+                    { status: 400 },
+                );
+            }
         }
 
         const generatedSlug = createSlug(title) || createSlug(receivedSlug);

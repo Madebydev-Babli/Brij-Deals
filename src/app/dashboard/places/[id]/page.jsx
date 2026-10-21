@@ -1,9 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react";
+import {
+    FaImages,
+    FaInfoCircle,
+    FaLightbulb,
+    FaMapMarkerAlt,
+    FaRegClock,
+} from "react-icons/fa";
 import { useParams } from "next/navigation";
 import LoadingComponent from "@/server-components/LoadingComponent";
 import NoDataComponent from "@/server-components/NoDataComponent";
+import Tabs from "@/server-components/Tabs";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchDetailsAPI, useFetchPostAPI } from "@/utility/custom-hooks";
 import PlaceForm from "@/client-components/PlaceForm";
@@ -55,20 +63,64 @@ export default function EditPlacePage() {
     const { id } = useParams();
     const { fetchPostAPI, postingData } = useFetchPostAPI();
     const { fetchDetailsAPI, fetchingDetails } = useFetchDetailsAPI();
+    const [activeTab, setActiveTab] = useState("basic-info");
     const [formData, setFormData] = useState(initialFormData);
     const [requestedPlaceId, setRequestedPlaceId] = useState(null);
+    const tabs = [
+        {
+            id: "basic-info",
+            label: "Basic Info",
+            icon: <FaInfoCircle className="mr-2 inline" />,
+        },
+        {
+            id: "schedule",
+            label: "Schedule",
+            icon: <FaRegClock className="mr-2 inline" />,
+        },
+        {
+            id: "attractions",
+            label: "Attractions",
+            icon: <FaMapMarkerAlt className="mr-2 inline" />,
+        },
+        {
+            id: "visitor-tips",
+            label: "Visitor Tips",
+            icon: <FaLightbulb className="mr-2 inline" />,
+        },
+        {
+            id: "gallery",
+            label: "Gallery",
+            icon: <FaImages className="mr-2 inline" />,
+        },
+    ];
 
     useEffect(() => {
         if (!id) return;
         fetchDetailsAPI(API_ENDPOINTS.FETCH_PLACES, id, (place) => {
             setFormData(normalizePlaceData(place));
         }).finally(() => setRequestedPlaceId(id));
-    }, [id]);
+    }, [fetchDetailsAPI, id]);
 
     function handleSubmit(e) {
         e.preventDefault();
         if (!formData._id) return;
         fetchPostAPI(API_ENDPOINTS.ADD_PLACE, formData, "/dashboard/places");
+    }
+
+    function handleSectionSave(field, items, onSuccess) {
+        if (!formData._id) return;
+        const updatedPlace = { ...formData, [field]: items };
+        fetchPostAPI(
+            API_ENDPOINTS.ADD_PLACE,
+            updatedPlace,
+            null,
+            (response) => {
+                const savedPlace = response?.data?.data;
+                if (!savedPlace?._id) return;
+                setFormData(normalizePlaceData(savedPlace));
+                onSuccess?.();
+            },
+        );
     }
 
     if (fetchingDetails || (id && requestedPlaceId !== id)) {
@@ -80,12 +132,17 @@ export default function EditPlacePage() {
     }
 
     return (
-        <PlaceForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleSubmit}
-            postingData={postingData}
-            submitLabel="Update Place"
-        />
+        <>
+            <Tabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <PlaceForm
+                formData={formData}
+                setFormData={setFormData}
+                onSubmit={handleSubmit}
+                onSaveSection={handleSectionSave}
+                postingData={postingData}
+                submitLabel="Update Place"
+                activeTab={activeTab}
+            />
+        </>
     );
 }
