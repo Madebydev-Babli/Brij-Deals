@@ -4,12 +4,6 @@ import Image from "next/image";
 import CollectionTabEditor from "@/client-components/CollectionTabEditor";
 import { handleImageChange, handleInputChange } from "@/utility/utility-function";
 
-function hasImage(image) {
-    return typeof image === "string"
-        ? Boolean(image)
-        : Boolean(image?.data || image?.url);
-}
-
 function imageUrl(image) {
     return typeof image === "string" ? image : image?.data || image?.url || "";
 }
@@ -210,6 +204,41 @@ export default function PlaceForm({
     submitLabel,
     activeTab,
 }) {
+    function handleBasicInfoSubmit(event) {
+        event.preventDefault();
+
+        const sno = Number(formData.sno);
+        const snoField = event.currentTarget.elements.namedItem("sno");
+        snoField.setCustomValidity(
+            Number.isInteger(sno) && sno > 0
+                ? ""
+                : "S.No. must be a positive integer",
+        );
+
+        for (const [name, label] of [["title", "Title"], ["location", "Full Location / Address"]]) {
+            const field = event.currentTarget.elements.namedItem(name);
+            field.setCustomValidity(
+                typeof formData[name] === "string" && formData[name].trim()
+                    ? ""
+                    : `${label} is required`,
+            );
+        }
+
+        if (!event.currentTarget.reportValidity()) return;
+
+        onSubmit(event, {
+            ...formData,
+            sno,
+            title: formData.title.trim(),
+            location: formData.location.trim(),
+        });
+    }
+
+    function handleRequiredFieldChange(event) {
+        event.currentTarget.setCustomValidity("");
+        handleInputChange(event, setFormData);
+    }
+
     if (activeTab && activeTab !== "basic-info") {
         const config = getCollectionTabConfig(
             activeTab,
@@ -227,43 +256,46 @@ export default function PlaceForm({
 
     return (
         <section>
-            <form onSubmit={onSubmit}>
+            <form onSubmit={handleBasicInfoSubmit}>
                 <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
                     <div>
-                        <label htmlFor="sno" className="form-label">S.No.</label>
+                        <label htmlFor="sno" className="form-label">S.No. <span className="text-red-600">*</span></label>
                         <input
                             placeholder="Enter the serial number"
-                            type="text"
+                            type="number"
+                            min="1"
+                            step="1"
                             id="sno"
                             name="sno"
-                            value={formData.sno}
-                            onChange={(event) => handleInputChange(event, setFormData)}
+                            value={formData.sno ?? ""}
+                            onChange={handleRequiredFieldChange}
                             className="form-input"
+                            required
                         />
-                        <p className="gray-600 text-xs">Leave this field empty if you want to add the Place in the last</p>
+                        <p className="gray-600 text-xs">Enter a positive whole number.</p>
                     </div>
                     <div>
-                        <label htmlFor="title" className="form-label">Title</label>
+                        <label htmlFor="title" className="form-label">Title <span className="text-red-600">*</span></label>
                         <input
                             placeholder="Enter the title"
                             type="text"
                             id="title"
                             name="title"
-                            value={formData.title}
-                            onChange={(event) => handleInputChange(event, setFormData)}
+                            value={formData.title ?? ""}
+                            onChange={handleRequiredFieldChange}
                             className="form-input"
                             required
                         />
                     </div>
                     <div>
-                        <label htmlFor="location" className="form-label">Full Location/Address</label>
+                        <label htmlFor="location" className="form-label">Full Location / Address <span className="text-red-600">*</span></label>
                         <input
                             placeholder="Enter the full place address"
                             type="text"
                             id="location"
                             name="location"
-                            value={formData.location}
-                            onChange={(event) => handleInputChange(event, setFormData)}
+                            value={formData.location ?? ""}
+                            onChange={handleRequiredFieldChange}
                             className="form-input"
                             required
                         />
@@ -278,7 +310,6 @@ export default function PlaceForm({
                             value={formData.openingTime}
                             onChange={(event) => handleInputChange(event, setFormData)}
                             className="form-input"
-                            required
                         />
                     </div>
                     <div>
@@ -291,7 +322,6 @@ export default function PlaceForm({
                             value={formData.closingTime}
                             onChange={(event) => handleInputChange(event, setFormData)}
                             className="form-input"
-                            required
                         />
                     </div>
                     <div>
@@ -317,7 +347,6 @@ export default function PlaceForm({
                         onChange={(event) => handleInputChange(event, setFormData)}
                         rows="4"
                         className="form-input"
-                        required
                     />
                 </div>
                 <div className="mb-4">
@@ -330,7 +359,6 @@ export default function PlaceForm({
                         onChange={(event) => handleInputChange(event, setFormData)}
                         rows="4"
                         className="form-input"
-                        required
                     />
                 </div>
                 <div className="mb-4">
@@ -355,7 +383,6 @@ export default function PlaceForm({
                             accept="image/jpeg,image/png"
                             onChange={(event) => handleImageChange(event, setFormData)}
                             className="form-input"
-                            required={!hasImage(formData.image)}
                         />
                         <ImagePreview image={formData.image} alt="Place image preview" />
                     </div>
@@ -368,7 +395,6 @@ export default function PlaceForm({
                             accept="image/jpeg,image/png"
                             onChange={(event) => handleImageChange(event, setFormData)}
                             className="form-input"
-                            required={!hasImage(formData.banner)}
                         />
                         <ImagePreview image={formData.banner} alt="Place banner preview" />
                     </div>

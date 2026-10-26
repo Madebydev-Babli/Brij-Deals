@@ -75,7 +75,9 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
             {/* 1. Banner Image */}
             <div className="relative w-full h-[250px] md:h-[350px] lg:h-[450px]">
 
-                <Image fill src={restaurant?.banner?.url} alt={restaurant?.title} className="w-full h-full object-cover" />
+                {restaurant?.banner?.url && (
+                    <Image fill src={restaurant.banner.url} alt={restaurant?.title} className="w-full h-full object-cover" />
+                )}
 
                 {/* Dark gradient to ensure breadcrumbs readability */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-transparent"></div>
@@ -128,7 +130,9 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
 
                             <div className="w-[150px] h-[150px] lg:w-[220px] lg:h-[220px] rounded-full border-[6px] lg:border-[8px] border-white shadow-xl bg-white overflow-hidden relative group">
 
-                                <Image fill src={restaurant?.logo?.url} alt={restaurant?.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                {restaurant?.logo?.url && (
+                                    <Image fill src={restaurant.logo.url} alt={restaurant?.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                )}
                                 <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-black/5 pointer-events-none"></div>
 
                             </div>

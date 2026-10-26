@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import { FaEdit } from "react-icons/fa";
 import { MdAdd } from "react-icons/md";
 import { RiDeleteBin7Line } from "react-icons/ri";
@@ -15,6 +16,10 @@ import {
   TRAVEL_MODE_ENUM,
 } from "@/utility/utility-data";
 import { formatDateTime } from "@/utility/utility-function";
+import {
+  IMAGE_UPLOAD_MESSAGES,
+  getImageFileValidationMessage,
+} from "@/utility/image-upload";
 
 function imageUrlForGallery(image) {
   return typeof image === "string" ? image : image?.data || image?.url || "";
@@ -25,7 +30,6 @@ function TextField({
   value,
   onChange,
   type = "text",
-  required = false,
   name,
   id = name,
 }) {
@@ -39,7 +43,7 @@ function TextField({
         name={name}
         type={type}
         value={value ?? ""}
-        required={required}
+        placeholder={`Enter ${label.toLowerCase()}`}
         onChange={(event) =>
           name
             ? onChange(name, event.target.value)
@@ -59,8 +63,19 @@ function ImageField({ label, image, onChange, id }) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const validationMessage = getImageFileValidationMessage(file);
+    if (validationMessage) {
+      toast.error(validationMessage, { position: "top-right" });
+      event.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => onChange({ data: reader.result, name: file.name });
+    reader.onerror = () => {
+      toast.error(IMAGE_UPLOAD_MESSAGES.unexpected, { position: "top-right" });
+      event.target.value = "";
+    };
     reader.readAsDataURL(file);
   }
 
@@ -520,7 +535,6 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
             <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <TextField
                 label="Title"
-                required
                 value={formData.title}
                 onChange={updateDraft}
                 name="title"
@@ -571,6 +585,7 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
                   id="room-description"
                   name="description"
                   value={formData.description || ""}
+                  placeholder="Enter the room description"
                   onChange={(event) =>
                     updateDraft("description", event.target.value)
                   }
@@ -614,6 +629,7 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
                     id={`room-amenity-${amenityIndex}`}
                     name={`amenity-${amenityIndex}`}
                     value={amenity}
+                    placeholder="Enter an amenity"
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,

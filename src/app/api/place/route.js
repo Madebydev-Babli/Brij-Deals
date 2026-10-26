@@ -54,6 +54,22 @@ function normalizeUploadedImage(uploadedImage) {
   };
 }
 
+function hasOwn(value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function isPositiveInteger(value) {
+  if (
+    (typeof value !== "number" && typeof value !== "string") ||
+    (typeof value === "string" && !value.trim())
+  ) {
+    return false;
+  }
+
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0;
+}
+
 async function uploadGalleryImages(gallery = []) {
   if (!Array.isArray(gallery)) return [];
 
@@ -129,66 +145,31 @@ export async function POST(req) {
       location,
       openingTime,
       closingTime,
-      artiTimings = [],
-      gallery = [],
+      artiTimings,
+      gallery,
       mapEmbed,
       mapLink,
-      attractions = [],
-      visitorTips = [],
+      attractions,
+      visitorTips,
     } = body;
 
-    if (!title?.trim()) {
+    if (!isPositiveInteger(sno)) {
+      return NextResponse.json(
+        { status: "error", message: "S.No. must be a positive integer" },
+        { status: 400 },
+      );
+    }
+
+    if (typeof title !== "string" || !title.trim()) {
       return NextResponse.json(
         { status: "error", message: "Title is required" },
         { status: 400 },
       );
     }
 
-    if (!description?.trim()) {
+    if (typeof location !== "string" || !location.trim()) {
       return NextResponse.json(
-        { status: "error", message: "Description is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!history?.trim()) {
-      return NextResponse.json(
-        { status: "error", message: "History is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!_id && !image?.data) {
-      return NextResponse.json(
-        { status: "error", message: "Place image is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!_id && !banner?.data) {
-      return NextResponse.json(
-        { status: "error", message: "Banner image is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!location?.trim()) {
-      return NextResponse.json(
-        { status: "error", message: "Location is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!openingTime?.trim()) {
-      return NextResponse.json(
-        { status: "error", message: "Opening time is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!closingTime?.trim()) {
-      return NextResponse.json(
-        { status: "error", message: "Closing time is required" },
+        { status: "error", message: "Full Location / Address is required" },
         { status: 400 },
       );
     }
@@ -291,35 +272,25 @@ export async function POST(req) {
       }
 
       let updatedSno = existingPlace.sno;
-      if (sno !== undefined && sno !== null && sno !== "") {
-        updatedSno = Number(sno);
+      updatedSno = Number(sno);
 
-        if (!Number.isInteger(updatedSno) || updatedSno < 1) {
-          await session.abortTransaction();
-          return NextResponse.json(
-            { status: "error", message: "Invalid serial number" },
-            { status: 400 },
-          );
-        }
-
-        if (updatedSno !== existingPlace.sno) {
-          if (updatedSno < existingPlace.sno) {
-            await PlaceModel.updateMany(
-              {
-                sno: { $gte: updatedSno, $lt: existingPlace.sno },
-                _id: { $ne: _id },
-              },
-              { $inc: { sno: 1 } },
-            ).session(session);
-          } else {
-            await PlaceModel.updateMany(
-              {
-                sno: { $gt: existingPlace.sno, $lte: updatedSno },
-                _id: { $ne: _id },
-              },
-              { $inc: { sno: -1 } },
-            ).session(session);
-          }
+      if (updatedSno !== existingPlace.sno) {
+        if (updatedSno < existingPlace.sno) {
+          await PlaceModel.updateMany(
+            {
+              sno: { $gte: updatedSno, $lt: existingPlace.sno },
+              _id: { $ne: _id },
+            },
+            { $inc: { sno: 1 } },
+          ).session(session);
+        } else {
+          await PlaceModel.updateMany(
+            {
+              sno: { $gt: existingPlace.sno, $lte: updatedSno },
+              _id: { $ne: _id },
+            },
+            { $inc: { sno: -1 } },
+          ).session(session);
         }
       }
 
@@ -342,7 +313,11 @@ export async function POST(req) {
       const normalizedGallery = [];
       const submittedGalleryPublicIds = new Set();
 
-      for (const item of Array.isArray(gallery) ? gallery : []) {
+      const galleryToSave = hasOwn(body, "gallery")
+        ? Array.isArray(gallery) ? gallery : []
+        : existingPlace.gallery || [];
+
+      for (const item of galleryToSave) {
         if (!item?.image) continue;
 
         if (item.image.data) {
@@ -386,15 +361,17 @@ export async function POST(req) {
           .filter(Boolean),
       );
 
-      for (const publicId of previousGalleryPublicIds) {
-        if (!submittedGalleryPublicIds.has(publicId)) {
-          try {
-            await deleteImage(publicId);
-          } catch (galleryError) {
-            console.error(
-              "Failed to delete removed gallery image:",
-              galleryError,
-            );
+      if (hasOwn(body, "gallery")) {
+        for (const publicId of previousGalleryPublicIds) {
+          if (!submittedGalleryPublicIds.has(publicId)) {
+            try {
+              await deleteImage(publicId);
+            } catch (galleryError) {
+              console.error(
+                "Failed to delete removed gallery image:",
+                galleryError,
+              );
+            }
           }
         }
       }
@@ -402,19 +379,37 @@ export async function POST(req) {
       existingPlace.sno = updatedSno;
       existingPlace.slug = generatedSlug;
       existingPlace.title = title.trim();
-      existingPlace.description = description.trim();
-      existingPlace.history = history.trim();
+      if (hasOwn(body, "description")) {
+        existingPlace.description = typeof description === "string" ? description.trim() : "";
+      }
+      if (hasOwn(body, "history")) {
+        existingPlace.history = typeof history === "string" ? history.trim() : "";
+      }
       existingPlace.image = updatedImage;
       existingPlace.banner = updatedBanner;
       existingPlace.location = location.trim();
-      existingPlace.openingTime = openingTime.trim();
-      existingPlace.closingTime = closingTime.trim();
-      existingPlace.artiTimings = Array.isArray(artiTimings) ? artiTimings : [];
-      existingPlace.gallery = normalizedGallery;
-      existingPlace.mapEmbed = mapEmbed?.trim() || "";
-      existingPlace.mapLink = mapLink?.trim() || "";
-      existingPlace.attractions = Array.isArray(attractions) ? attractions : [];
-      existingPlace.visitorTips = Array.isArray(visitorTips) ? visitorTips : [];
+      if (hasOwn(body, "openingTime")) {
+        existingPlace.openingTime = typeof openingTime === "string" ? openingTime.trim() : "";
+      }
+      if (hasOwn(body, "closingTime")) {
+        existingPlace.closingTime = typeof closingTime === "string" ? closingTime.trim() : "";
+      }
+      if (hasOwn(body, "artiTimings")) {
+        existingPlace.artiTimings = Array.isArray(artiTimings) ? artiTimings : [];
+      }
+      if (hasOwn(body, "gallery")) existingPlace.gallery = normalizedGallery;
+      if (hasOwn(body, "mapEmbed")) {
+        existingPlace.mapEmbed = typeof mapEmbed === "string" ? mapEmbed.trim() : "";
+      }
+      if (hasOwn(body, "mapLink")) {
+        existingPlace.mapLink = typeof mapLink === "string" ? mapLink.trim() : "";
+      }
+      if (hasOwn(body, "attractions")) {
+        existingPlace.attractions = Array.isArray(attractions) ? attractions : [];
+      }
+      if (hasOwn(body, "visitorTips")) {
+        existingPlace.visitorTips = Array.isArray(visitorTips) ? visitorTips : [];
+      }
 
       await existingPlace.save({ session });
       await session.commitTransaction();
@@ -469,57 +464,45 @@ export async function POST(req) {
       );
     }
 
-    let newSno = maxSno + 1;
-    if (sno !== undefined && sno !== null && sno !== "") {
-      newSno = Number(sno);
-
-      if (!Number.isInteger(newSno) || newSno < 1) {
-        await session.abortTransaction();
-        return NextResponse.json(
-          { status: "error", message: "Invalid serial number" },
-          { status: 400 },
-        );
-      }
-
-      if (newSno <= maxSno) {
-        await PlaceModel.updateMany(
-          { sno: { $gte: newSno } },
-          { $inc: { sno: 1 } },
-        ).session(session);
-      }
+    const newSno = Number(sno);
+    if (newSno <= maxSno) {
+      await PlaceModel.updateMany(
+        { sno: { $gte: newSno } },
+        { $inc: { sno: 1 } },
+      ).session(session);
     }
 
-    const uploadedImage = normalizeUploadedImage(
-      await uploadImage(image.data, "braj_deals/places"),
+    const uploadedImage = image?.data
+      ? normalizeUploadedImage(await uploadImage(image.data, "braj_deals/places"))
+      : null;
+    const uploadedBanner = banner?.data
+      ? normalizeUploadedImage(
+        await uploadImage(
+          banner.data,
+          "braj_deals/places/banners",
+          5 * 1024 * 1024,
+        ),
+      )
+      : null;
+    const uploadedGallery = await uploadGalleryImages(
+      Array.isArray(gallery) ? gallery : [],
     );
-    const uploadedBanner = normalizeUploadedImage(
-      await uploadImage(
-        banner.data,
-        "braj_deals/places/banners",
-        1024 * 1024 * 2,
-      ),
-    );
-    const uploadedGallery = await uploadGalleryImages(gallery);
-
-    if (!uploadedImage || !uploadedBanner) {
-      throw new Error("Place image and banner upload failed");
-    }
 
     const newPlace = new PlaceModel({
       sno: newSno,
       slug: generatedSlug,
       title: title.trim(),
-      description: description.trim(),
-      history: history.trim(),
+      ...(typeof description === "string" ? { description: description.trim() } : {}),
+      ...(typeof history === "string" ? { history: history.trim() } : {}),
       image: uploadedImage,
       banner: uploadedBanner,
       location: location.trim(),
-      openingTime: openingTime.trim(),
-      closingTime: closingTime.trim(),
+      ...(typeof openingTime === "string" ? { openingTime: openingTime.trim() } : {}),
+      ...(typeof closingTime === "string" ? { closingTime: closingTime.trim() } : {}),
       artiTimings: Array.isArray(artiTimings) ? artiTimings : [],
       gallery: uploadedGallery,
-      mapEmbed: mapEmbed?.trim() || "",
-      mapLink: mapLink?.trim() || "",
+      mapEmbed: typeof mapEmbed === "string" ? mapEmbed.trim() : "",
+      mapLink: typeof mapLink === "string" ? mapLink.trim() : "",
       attractions: Array.isArray(attractions) ? attractions : [],
       visitorTips: Array.isArray(visitorTips) ? visitorTips : [],
     });
@@ -545,7 +528,7 @@ export async function POST(req) {
 
     return NextResponse.json(
       { status: "error", message: getErrorMessage(error) },
-      { status: 500 },
+      { status: error?.statusCode || 500 },
     );
   } finally {
     session.endSession();

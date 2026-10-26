@@ -23,12 +23,36 @@ export default function AddNewRestaurentPage() {
         shortLocation: '',
         email: '',
         phone: '',
-        isVeg: true,
+        isVeg: '',
     });
 
     async function handleSubmit(e) {
         e.preventDefault();
-        fetchPostAPI(API_ENDPOINTS.ADD_RESTAURENT, formData, '/dashboard/restaurents');
+        const requiredFields = ["sno", "title", "category", "shortLocation", "isVeg"];
+        for (const name of requiredFields) {
+            const field = e.currentTarget.elements.namedItem(name);
+            if (name === "sno") {
+                field.setCustomValidity(
+                    Number.isInteger(Number(formData.sno)) && Number(formData.sno) > 0
+                        ? ""
+                        : "S.No. must be a positive integer",
+                );
+            } else if (name === "title") {
+                field.setCustomValidity(formData.title.trim() ? "" : "Title is required");
+            }
+        }
+        if (!e.currentTarget.reportValidity()) return;
+
+        fetchPostAPI(
+            API_ENDPOINTS.ADD_RESTAURENT,
+            {
+                ...formData,
+                sno: Number(formData.sno),
+                title: formData.title.trim(),
+                isVeg: formData.isVeg === "true",
+            },
+            '/dashboard/restaurents',
+        );
     }
 
     return (
@@ -39,19 +63,18 @@ export default function AddNewRestaurentPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
                     <div>
-                        <label htmlFor="sno" className="form-label">S.No.</label>
-                        <input placeholder="Enter the serial number" type="text" id="sno" name="sno" value={formData.sno} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
-                        <p className="gray-600 text-xs">Leave this field empty if you want to add the Restaurant in the last</p>
+                        <label htmlFor="sno" className="form-label">S.No. <span className="text-red-600">*</span></label>
+                        <input required min="1" step="1" placeholder="Enter the serial number" type="number" id="sno" name="sno" value={formData.sno} onChange={(e) => { e.currentTarget.setCustomValidity(""); handleInputChange(e, setFormData); }} className="form-input" />
                     </div>
 
                     <div>
-                        <label htmlFor="title" className="form-label">Title</label>
-                        <input placeholder="Enter the restaurant title" type="text" id="title" name="title" value={formData.title} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input" />
+                        <label htmlFor="title" className="form-label">Title <span className="text-red-600">*</span></label>
+                        <input required placeholder="Enter the restaurant title" type="text" id="title" name="title" value={formData.title} onChange={(e) => { e.currentTarget.setCustomValidity(""); handleInputChange(e, setFormData); }} className="form-input" />
                     </div>
 
                     <div>
-                        <label htmlFor="category" className="form-label">Category</label>
-                        <select id="category" name="category" value={formData.category} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input">
+                        <label htmlFor="category" className="form-label">Category <span className="text-red-600">*</span></label>
+                        <select required id="category" name="category" value={formData.category} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input">
                             <option value="">Select Category</option>
                             {RESTAURANT_CATEGORIES_ENUM.map((cat) => (
                                 <option key={cat} value={cat}>{cat}</option>
@@ -60,8 +83,8 @@ export default function AddNewRestaurentPage() {
                     </div>
 
                     <div>
-                        <label htmlFor="shortLocation" className="form-label">Short Location (City)</label>
-                        <select id="shortLocation" name="shortLocation" value={formData.shortLocation} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input">
+                        <label htmlFor="shortLocation" className="form-label">Short Location (City) <span className="text-red-600">*</span></label>
+                        <select required id="shortLocation" name="shortLocation" value={formData.shortLocation} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input">
                             <option value="">Select Location</option>
                             {LOCATION_ENUM.map((loc) => (
                                 <option key={loc} value={loc}>{loc}</option>
@@ -90,8 +113,9 @@ export default function AddNewRestaurentPage() {
                     </div>
 
                     <div>
-                        <label htmlFor="isVeg" className="form-label">Food Type</label>
-                        <select id="isVeg" name="isVeg" value={formData.isVeg.toString()} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input">
+                        <label htmlFor="isVeg" className="form-label">Food Type <span className="text-red-600">*</span></label>
+                        <select required id="isVeg" name="isVeg" value={formData.isVeg.toString()} onChange={(e) => { handleInputChange(e, setFormData) }} className="form-input">
+                            <option value="">Select Food Type</option>
                             <option value="true">Veg</option>
                             <option value="false">Non-Veg / Both</option>
                         </select>

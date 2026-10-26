@@ -173,7 +173,7 @@ export async function POST(req) {
     ? await uploadImage(
         image.data,
         "braj_deals/banners",
-        1024 * 1024 * 2
+        5 * 1024 * 1024
     )
     : null;
 
@@ -240,7 +240,7 @@ export async function POST(req) {
     ? await uploadImage(
         image.data,
         "braj_deals/banners",
-        1024 * 1024 * 2
+        5 * 1024 * 1024
     )
     : null;
 
@@ -302,7 +302,7 @@ export async function POST(req) {
                 message: errorMessage,
                 error: errorMessage,
             },
-            { status: 500 }
+            { status: error?.statusCode || 500 }
         );
     }
 }

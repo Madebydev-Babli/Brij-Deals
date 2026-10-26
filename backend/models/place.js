@@ -1,5 +1,15 @@
 import mongoose from "mongoose";
 
+function createSlug(title) {
+    return title
+        ?.toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+}
+
 const artiTimingSchema = new mongoose.Schema(
     {
         sno: {
@@ -95,11 +105,30 @@ const visitorTipSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const imageSchema = new mongoose.Schema(
+    {
+        url: {
+            type: String,
+            required: true,
+        },
+        publicId: {
+            type: String,
+            required: true,
+        },
+    },
+    { _id: false }
+);
+
 const placeSchema = new mongoose.Schema(
     {
         sno: {
             type: Number,
             required: true,
+            min: [1, "S.No. must be a positive integer"],
+            validate: {
+                validator: Number.isInteger,
+                message: "S.No. must be a positive integer",
+            },
         },
 
         slug: {
@@ -107,6 +136,9 @@ const placeSchema = new mongoose.Schema(
             required: [true, "Slug is required"],
             unique: true,
             trim: true,
+            default: function () {
+                return createSlug(this.title);
+            },
         },
 
         title: {
@@ -117,36 +149,22 @@ const placeSchema = new mongoose.Schema(
 
         description: {
             type: String,
-            required: [true, "Description is required"],
             trim: true,
         },
 
         history: {
             type: String,
-            required: [true, "History is required"],
             trim: true,
         },
 
         image: {
-            url: {
-                type: String,
-                required: true,
-            },
-            publicId: {
-                type: String,
-                required: true,
-            },
+            type: imageSchema,
+            default: null,
         },
 
         banner: {
-            url: {
-                type: String,
-                required: true,
-            },
-            publicId: {
-                type: String,
-                required: true,
-            },
+            type: imageSchema,
+            default: null,
         },
 
         location: {
@@ -157,13 +175,11 @@ const placeSchema = new mongoose.Schema(
 
         openingTime: {
             type: String,
-            required: [true, "Opening time is required"],
             trim: true,
         },
 
         closingTime: {
             type: String,
-            required: [true, "Closing time is required"],
             trim: true,
         },
 

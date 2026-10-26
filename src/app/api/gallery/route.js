@@ -63,7 +63,7 @@ export async function POST(req) {
                 await GalleryModel.updateMany({ sno: { $gt: amenity.sno, $lte: sno } }, { $inc: { sno: -1 } }, { session });
             }
 
-            const uploadedImage = await uploadImage(image, "braj_deals/gallery", 1024 * 1024 * 1);
+            const uploadedImage = await uploadImage(image, "braj_deals/gallery", 5 * 1024 * 1024);
 
             if (uploadedImage && uploadedImage.status === false) {
                 return NextResponse.json({ status: "error", message: uploadedImage.message, data: null, error: uploadedImage.message }, { status: 400 });
@@ -94,7 +94,7 @@ export async function POST(req) {
                 await GalleryModel.updateMany({ sno: { $gte: sno } }, { $inc: { sno: 1 } }, { session });
             }
 
-            const uploadedImage = await uploadImage(image, "braj_deals/gallery", 1024 * 1024 * 1);
+            const uploadedImage = await uploadImage(image, "braj_deals/gallery", 5 * 1024 * 1024);
 
             if (uploadedImage && uploadedImage.status === false) {
                 return NextResponse.json({ status: "error", message: uploadedImage.message, data: null, error: uploadedImage.message }, { status: 400 });
@@ -121,7 +121,7 @@ export async function POST(req) {
 
     } catch (error) {
         const errorMessage = await getErrorMessage(error, session);
-        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: 500 });
+        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: error?.statusCode || 500 });
     }
 }
 

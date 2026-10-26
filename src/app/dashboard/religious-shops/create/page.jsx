@@ -13,9 +13,9 @@ export default function CreateReligiousShopPage() {
     const { fetchPostAPI, postingData } = useFetchPostAPI();
     const [formData, setFormData] = useState(initialReligiousShopFormData);
 
-    function handleSubmit(event) {
+    function handleSubmit(event, validatedFormData) {
         event.preventDefault();
-        fetchPostAPI(API_ENDPOINTS.ADD_RELIGIOUS_SHOP, formData, null, (response) => {
+        fetchPostAPI(API_ENDPOINTS.ADD_RELIGIOUS_SHOP, validatedFormData, null, (response) => {
             const createdShop = response?.data?.data?.[0] || response?.data?.data;
             if (!createdShop?._id) {
                 toast.error("Religious shop was created, but its ID was not returned.", { position: "top-right" });

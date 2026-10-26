@@ -1,103 +1,100 @@
-import { LOCATION_ENUM, RESTAURANT_CATEGORIES_ENUM } from '@/utility/utility-data';
-import mongoose from 'mongoose';
+import {
+  LOCATION_ENUM,
+  RESTAURANT_CATEGORIES_ENUM,
+} from "@/utility/utility-data";
+import mongoose from "mongoose";
 
-const restaurentSchema = new mongoose.Schema({
+const imageSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true, trim: true },
+    publicId: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
 
+const restaurentSchema = new mongoose.Schema(
+  {
     sno: {
-        type: Number,
-        required: true,
+      type: Number,
+      required: true,
+      min: [1, "S.No. must be a positive integer"],
+      validate: {
+        validator: Number.isInteger,
+        message: "S.No. must be a positive integer",
+      },
     },
 
     slug: {
-        type: String,
-        required: [true, "Slug is required"],
-        trim: true,
+      type: String,
+      required: [true, "Slug is required"],
+      trim: true,
     },
 
     title: {
-        type: String,
-        required: [true, "Title is required"],
-        trim: true,
+      type: String,
+      required: [true, "Title is required"],
+      trim: true,
     },
 
     category: {
-        type: String,
-        required: [true, "Category is required"],
-        trim: true,
-        enum: RESTAURANT_CATEGORIES_ENUM,
+      type: String,
+      required: [true, "Category is required"],
+      trim: true,
+      enum: RESTAURANT_CATEGORIES_ENUM,
     },
 
     description: {
-        type: String,
-        required: [true, "Description is required"],
-        trim: true,
+      type: String,
+
+      trim: true,
     },
 
     logo: {
-
-        url: {
-            type: String,
-            required: true,
-        },
-
-        publicId: {
-            type: String,
-            required: true,
-        }
-
+      type: imageSchema,
+      default: null,
     },
 
     banner: {
-
-        url: {
-            type: String,
-            required: true,
-        },
-
-        publicId: {
-            type: String,
-            required: true,
-        }
-
+      type: imageSchema,
+      default: null,
     },
 
     mapLink: {
-        type: String,
-        trim: true,
+      type: String,
+      trim: true,
     },
 
     location: {
-        type: String,
-        required: [true, "Location is required"],
-        trim: true,
+      type: String,
+      trim: true,
     },
 
     shortLocation: {
-        type: String,
-        required: [true, "Short Location is required"],
-        trim: true,
-        enum: LOCATION_ENUM,
+      type: String,
+      required: [true, "Short Location is required"],
+      trim: true,
+      enum: LOCATION_ENUM,
     },
 
     email: {
-        type: String,
-        required: [true, "Email is required"],
-        trim: true,
+      type: String,
+      trim: true,
     },
 
     phone: {
-        type: String,
-        required: [true, "Phone is required"],
-        trim: true,
+      type: String,
+      trim: true,
     },
 
     isVeg: {
-        type: Boolean,
-        default: true,
+      type: Boolean,
+      required: [true, "Food type is required"],
     },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-}, {
-    timestamps: true
-});
-
-export const RestaurentModel = mongoose.models.Restaurent || mongoose.model('Restaurent', restaurentSchema);
+export const RestaurentModel =
+  mongoose.models.Restaurent || mongoose.model("Restaurent", restaurentSchema);

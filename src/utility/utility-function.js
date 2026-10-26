@@ -1,3 +1,9 @@
+import { toast } from "react-toastify";
+import {
+    IMAGE_UPLOAD_MESSAGES,
+    getImageFileValidationMessage,
+} from "@/utility/image-upload";
+
 export function formatDateTime(dateTimeStr) {
     const date = new Date(dateTimeStr);
 
@@ -43,9 +49,16 @@ export function handleImageChange(e, ...args) {
 
     if (!setFormData || !file) return;
 
+    const validationMessage = getImageFileValidationMessage(file);
+    if (validationMessage) {
+        toast.error(validationMessage, { position: "top-right" });
+        e.target.value = "";
+        return;
+    }
+
     const reader = new FileReader();
 
-    reader.onloadend = () => {
+    reader.onload = () => {
         setFormData((prev) => ({
             ...prev,
             [fieldName]: {
@@ -53,6 +66,11 @@ export function handleImageChange(e, ...args) {
                 name: file.name,
             },
         }));
+    };
+
+    reader.onerror = () => {
+        toast.error(IMAGE_UPLOAD_MESSAGES.unexpected, { position: "top-right" });
+        e.target.value = "";
     };
 
     reader.readAsDataURL(file);

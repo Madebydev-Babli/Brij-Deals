@@ -95,7 +95,7 @@ function ToolbarButton({ onClick, onMouseDown, isActive, children, title }) {
   );
 }
 
-export default function RichTextEditor({ value, onChange }) {
+export default function RichTextEditor({ value, onChange, placeholder = "" }) {
   const [linkDialog, setLinkDialog] = useState({
     from: 0,
     to: 0,
@@ -132,6 +132,11 @@ export default function RichTextEditor({ value, onChange }) {
     ],
 
     content: value || "",
+    editorProps: {
+      attributes: {
+        "data-placeholder": placeholder,
+      },
+    },
 
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -502,6 +507,13 @@ export default function RichTextEditor({ value, onChange }) {
           font-size: 0.95rem;
           line-height: 1.6;
           color: #1f2937;
+        }
+
+        .ProseMirror[data-placeholder]:has(> p:only-child):has(> p > br.ProseMirror-trailingBreak)::before {
+          content: attr(data-placeholder);
+          position: absolute;
+          color: #9ca3af;
+          pointer-events: none;
         }
 
         .ProseMirror h2 {

@@ -101,10 +101,10 @@ export default function EditPlacePage() {
         }).finally(() => setRequestedPlaceId(id));
     }, [fetchDetailsAPI, id]);
 
-    function handleSubmit(e) {
+    function handleSubmit(e, validatedFormData) {
         e.preventDefault();
         if (!formData._id) return;
-        fetchPostAPI(API_ENDPOINTS.ADD_PLACE, formData, "/dashboard/places");
+        fetchPostAPI(API_ENDPOINTS.ADD_PLACE, validatedFormData, "/dashboard/places");
     }
 
     function handleSectionSave(field, items, onSuccess) {

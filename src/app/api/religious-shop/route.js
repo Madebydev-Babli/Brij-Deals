@@ -17,6 +17,18 @@ function createSlug(title) {
         .replace(/^-|-$/g, "") || "";
 }
 
+function hasOwn(value, key) {
+    return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function isPositiveInteger(value) {
+    return (
+        (typeof value === "number" || (typeof value === "string" && value.trim() !== "")) &&
+        Number.isInteger(Number(value)) &&
+        Number(value) > 0
+    );
+}
+
 function normalizeUploadedImage(uploadedImage) {
     if (!uploadedImage?.secure_url || !uploadedImage?.public_id) return null;
     return { url: uploadedImage.secure_url, publicId: uploadedImage.public_id };
@@ -33,7 +45,7 @@ function normalizeExistingImage(image) {
     return null;
 }
 
-async function uploadSingleImage(imageData, folder, maxSize = 1024 * 1024 * 2) {
+async function uploadSingleImage(imageData, folder, maxSize = 5 * 1024 * 1024) {
     if (!imageData?.data) return null;
     const uploaded = await uploadImage(imageData.data, folder, maxSize);
     return normalizeUploadedImage(uploaded);
@@ -155,31 +167,28 @@ export async function POST(req) {
             reviewCount,
             googleReview,
             startingPrice,
-            attractions = [],
-            products = [],
+            attractions,
+            products,
         } = body;
 
-        if (!title?.trim()) {
+        if (!isPositiveInteger(sno)) {
+            return NextResponse.json({ status: "error", message: "S.No. must be a positive integer", data: null, error: "S.No. must be a positive integer" }, { status: 400 });
+        }
+
+        if (typeof title !== "string" || !title.trim()) {
             return NextResponse.json({ status: "error", message: "Title is required", data: null, error: "Title is required" }, { status: 400 });
         }
 
-        if (!description?.trim()) {
-            return NextResponse.json({ status: "error", message: "Description is required", data: null, error: "Description is required" }, { status: 400 });
+        if (typeof receivedSlug !== "string" || !receivedSlug.trim()) {
+            return NextResponse.json({ status: "error", message: "Slug is required", data: null, error: "Slug is required" }, { status: 400 });
         }
 
-        if (!location?.trim()) {
-            return NextResponse.json({ status: "error", message: "Location is required", data: null, error: "Location is required" }, { status: 400 });
-        }
-
-        if (!shortLocation?.trim()) {
+        if (typeof shortLocation !== "string" || !shortLocation.trim()) {
             return NextResponse.json({ status: "error", message: "Short location is required", data: null, error: "Short location is required" }, { status: 400 });
         }
 
-        if (startingPrice === undefined || startingPrice === null || startingPrice === "") {
-            return NextResponse.json({ status: "error", message: "Starting Price is required", data: null, error: "Starting Price is required" }, { status: 400 });
-        }
-
         for (const [label, records] of [["Product", products], ["Attraction", attractions]]) {
+            if (!hasOwn(body, label === "Product" ? "products" : "attractions")) continue;
             const validationError = validateNestedSerialNumbers(label, records);
             if (validationError) {
                 return NextResponse.json(
@@ -189,10 +198,13 @@ export async function POST(req) {
             }
         }
 
-        const generatedSlug = createSlug(title) || createSlug(receivedSlug);
+        const generatedSlug = createSlug(receivedSlug);
         if (!generatedSlug) {
-            return NextResponse.json({ status: "error", message: "Valid title or slug is required", data: null, error: "Valid title or slug is required" }, { status: 400 });
+            return NextResponse.json({ status: "error", message: "Valid slug is required", data: null, error: "Valid slug is required" }, { status: 400 });
         }
+
+        const normalizedTitle = title.trim();
+        const normalizedShortLocation = shortLocation.trim();
 
         const lastShop = await ReligiousShopModel.findOne({}).sort({ sno: -1 }).select("sno").session(session);
         const maxSno = lastShop?.sno || 0;
@@ -211,9 +223,9 @@ export async function POST(req) {
             }
 
             let updatedSno = existingShop.sno;
-            if (sno !== undefined && sno !== null && sno !== "") {
+            if (hasOwn(body, "sno")) {
                 updatedSno = Number(sno);
-                if (!Number.isInteger(updatedSno) || updatedSno < 1) {
+                if (!isPositiveInteger(sno)) {
                     await session.abortTransaction();
                     return NextResponse.json({ status: "error", message: "Invalid serial number", data: null, error: "Invalid serial number" }, { status: 400 });
                 }
@@ -245,8 +257,12 @@ export async function POST(req) {
                 if (uploadedBanner) updatedBanner = uploadedBanner;
             }
 
-            const normalizedProducts = await normalizeProducts(products);
-            const normalizedAttractions = normalizeAttractions(attractions);
+            const normalizedProducts = hasOwn(body, "products")
+                ? await normalizeProducts(products)
+                : existingShop.products;
+            const normalizedAttractions = hasOwn(body, "attractions")
+                ? normalizeAttractions(attractions)
+                : existingShop.attractions;
 
             const previousPublicIds = new Set(collectPublicIds(existingShop));
             const submittedPublicIds = new Set();
@@ -270,27 +286,22 @@ export async function POST(req) {
 
             existingShop.sno = updatedSno;
             existingShop.slug = generatedSlug;
-            existingShop.title = title.trim();
-            existingShop.description = description.trim();
+            existingShop.title = normalizedTitle;
+            if (hasOwn(body, "description")) existingShop.description = typeof description === "string" ? description.trim() : "";
             existingShop.image = updatedImage;
             existingShop.logo = updatedLogo;
             existingShop.banner = updatedBanner;
-            existingShop.location = location.trim();
-            existingShop.shortLocation = shortLocation.trim();
-            existingShop.mapLink = mapLink?.trim() || "";
-            existingShop.email = email?.trim() || "";
-            existingShop.phone = phone?.trim() || "";
-            existingShop.whatsapp = whatsapp?.trim() || "";
-            existingShop.instagram = instagram?.trim() || "";
-            existingShop.facebook = facebook?.trim() || "";
-            existingShop.youtube = youtube?.trim() || "";
-            existingShop.website = website?.trim() || "";
-            existingShop.openingTime = openingTime?.trim() || "";
-            existingShop.closingTime = closingTime?.trim() || "";
-            existingShop.rating = Number(rating) || 0;
-            existingShop.reviewCount = Number(reviewCount) || 0;
-            existingShop.googleReview = googleReview?.trim() || "";
-            existingShop.startingPrice = Number(startingPrice) || 0;
+            if (hasOwn(body, "location")) existingShop.location = typeof location === "string" ? location.trim() : "";
+            existingShop.shortLocation = normalizedShortLocation;
+            for (const [field, value] of Object.entries({
+                mapLink, email, phone, whatsapp, instagram, facebook, youtube, website,
+                openingTime, closingTime, googleReview,
+            })) {
+                if (hasOwn(body, field)) existingShop[field] = typeof value === "string" ? value.trim() : "";
+            }
+            if (hasOwn(body, "rating")) existingShop.rating = Number(rating) || 0;
+            if (hasOwn(body, "reviewCount")) existingShop.reviewCount = Number(reviewCount) || 0;
+            if (hasOwn(body, "startingPrice")) existingShop.startingPrice = Number(startingPrice) || 0;
             existingShop.attractions = normalizedAttractions;
             existingShop.products = normalizedProducts;
 
@@ -309,31 +320,9 @@ export async function POST(req) {
             return NextResponse.json({ status: "error", message: "A religious shop with this slug already exists", data: null, error: "A religious shop with this slug already exists" }, { status: 409 });
         }
 
-        let newSno = maxSno + 1;
-        if (sno !== undefined && sno !== null && sno !== "") {
-            newSno = Number(sno);
-            if (!Number.isInteger(newSno) || newSno < 1) {
-                await session.abortTransaction();
-                return NextResponse.json({ status: "error", message: "Invalid serial number", data: null, error: "Invalid serial number" }, { status: 400 });
-            }
-            if (newSno <= maxSno) {
-                await ReligiousShopModel.updateMany({ sno: { $gte: newSno } }, { $inc: { sno: 1 } }).session(session);
-            }
-        }
-
-        if (!image?.data) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Main image is required", data: null, error: "Main image is required" }, { status: 400 });
-        }
-
-        if (!logo?.data) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Logo is required", data: null, error: "Logo is required" }, { status: 400 });
-        }
-
-        if (!banner?.data) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Banner is required", data: null, error: "Banner is required" }, { status: 400 });
+        const newSno = Number(sno);
+        if (newSno <= maxSno) {
+            await ReligiousShopModel.updateMany({ sno: { $gte: newSno } }, { $inc: { sno: 1 } }).session(session);
         }
 
         const uploadedImage = await uploadSingleImage(image, "braj_deals/religious-shops");
@@ -342,21 +331,16 @@ export async function POST(req) {
         const normalizedProducts = await normalizeProducts(products);
         const normalizedAttractions = normalizeAttractions(attractions);
 
-        if (!uploadedImage || !uploadedLogo || !uploadedBanner) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Image upload failed", data: null, error: "Image upload failed" }, { status: 500 });
-        }
-
         const newReligiousShop = new ReligiousShopModel({
             sno: newSno,
             slug: generatedSlug,
-            title: title.trim(),
-            description: description.trim(),
+            title: normalizedTitle,
+            description: typeof description === "string" ? description.trim() : "",
             image: uploadedImage,
             logo: uploadedLogo,
             banner: uploadedBanner,
-            location: location.trim(),
-            shortLocation: shortLocation.trim(),
+            location: typeof location === "string" ? location.trim() : "",
+            shortLocation: normalizedShortLocation,
             mapLink: mapLink?.trim() || "",
             email: email?.trim() || "",
             phone: phone?.trim() || "",
@@ -384,7 +368,7 @@ export async function POST(req) {
         return NextResponse.json({ status: "success", message: "Religious shop added successfully", data: { data: [newReligiousShop] }, error: null }, { status: 201 });
     } catch (error) {
         const errorMessage = await getErrorMessage(error, session);
-        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: 500 });
+        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: error?.statusCode || 500 });
     } finally {
         if (session && typeof session.endSession === "function") session.endSession();
     }

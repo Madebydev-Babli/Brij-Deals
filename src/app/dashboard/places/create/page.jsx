@@ -27,9 +27,9 @@ export default function AddNewPlacePage() {
     const { fetchPostAPI, postingData } = useFetchPostAPI();
     const [formData, setFormData] = useState(initialFormData);
 
-    function handleSubmit(e) {
+    function handleSubmit(e, validatedFormData) {
         e.preventDefault();
-        fetchPostAPI(API_ENDPOINTS.ADD_PLACE, formData, "/dashboard/places");
+        fetchPostAPI(API_ENDPOINTS.ADD_PLACE, validatedFormData, "/dashboard/places");
     }
 
     return (

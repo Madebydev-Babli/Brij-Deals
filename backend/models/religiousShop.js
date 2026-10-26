@@ -39,6 +39,11 @@ const schema = new mongoose.Schema(
         sno: {
             type: Number,
             required: true,
+            min: [1, "S.No. must be a positive integer"],
+            validate: {
+                validator: Number.isInteger,
+                message: "S.No. must be a positive integer",
+            },
         },
         slug: {
             type: String,
@@ -52,7 +57,6 @@ const schema = new mongoose.Schema(
         },
         description: {
             type: String,
-            required: [true, "Description is required"],
             trim: true,
         },
         image: {
@@ -69,7 +73,6 @@ const schema = new mongoose.Schema(
         },
         location: {
             type: String,
-            required: [true, "Location is required"],
             trim: true,
         },
         shortLocation: {

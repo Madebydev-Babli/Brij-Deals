@@ -1,12 +1,16 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { toast } from 'react-toastify';
+import { getFriendlyImageUploadMessage } from '@/utility/image-upload';
 
 export function useFetchPostAPI() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
     async function fetchPostAPI(API_ENDPOINT, formData, pathToRedirect, onSuccess = () => { }, secured = true) {
+        let requestTimeout;
+        let includesImageUpload = false;
+
         try {
             const token = sessionStorage.getItem('token');
             if (secured && !token) {
@@ -16,6 +20,12 @@ export function useFetchPostAPI() {
             }
 
             setLoading(true);
+            const requestBody = JSON.stringify(formData);
+            includesImageUpload = requestBody.includes("data:image/");
+            const controller = includesImageUpload ? new AbortController() : null;
+            if (controller) {
+                requestTimeout = setTimeout(() => controller.abort(), 120000);
+            }
 
             const response = await fetch(API_ENDPOINT.path, {
                 method: API_ENDPOINT.method,
@@ -23,8 +33,15 @@ export function useFetchPostAPI() {
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData),
+                body: requestBody,
+                ...(controller ? { signal: controller.signal } : {}),
             });
+
+            if (includesImageUpload && response.status === 413) {
+                const error = new Error("Upload request exceeds the server request size limit");
+                error.code = "REQUEST_TOO_LARGE";
+                throw error;
+            }
 
             const data = await response.json();
 
@@ -36,8 +53,14 @@ export function useFetchPostAPI() {
                 toast.error(data.message, { position: "top-right" });
             }
         } catch (error) {
-            toast.error(error.message, { position: "top-right" });
+            const message = includesImageUpload
+                ? getFriendlyImageUploadMessage(error)
+                : error?.name === "AbortError"
+                    ? "The request took too long. Please try again."
+                    : "Something went wrong. Please try again.";
+            toast.error(message, { position: "top-right" });
         } finally {
+            clearTimeout(requestTimeout);
             setLoading(false);
         }
     }

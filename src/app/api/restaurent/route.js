@@ -24,8 +24,50 @@ import { AmenityModel } from "../../../../backend/models/amenity";
 import { AttractionModel } from "../../../../backend/models/attraction";
 import { GalleryModel } from "../../../../backend/models/gallery";
 
+function createSlug(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function isPositiveInteger(value) {
+  return (
+    (typeof value === "number" ||
+      (typeof value === "string" && value.trim() !== "")) &&
+    Number.isInteger(Number(value)) &&
+    Number(value) > 0
+  );
+}
+
+function normalizeFoodType(value) {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return null;
+}
+
+async function uploadRestaurantImage(image, folder, maxSize) {
+  const imageData =
+    typeof image === "string" && image.startsWith("data:image/")
+      ? image
+      : image?.data;
+  if (!imageData) return null;
+
+  const uploaded = await uploadImage(imageData, folder, maxSize);
+  if (!uploaded?.secure_url || !uploaded?.public_id) {
+    throw new Error(`Restaurant image upload failed: ${folder}`);
+  }
+
+  return {
+    url: uploaded.secure_url,
+    publicId: uploaded.public_id,
+  };
+}
+
 export async function POST(req) {
   let session = null;
+  const uploadedPublicIds = [];
+  let transactionCommitted = false;
 
   try {
     await connectToDatabase();
@@ -37,7 +79,6 @@ export async function POST(req) {
 
     if (!decoded) {
       await session.abortTransaction();
-      session.endSession();
 
       return NextResponse.json(
         {
@@ -50,6 +91,7 @@ export async function POST(req) {
       );
     }
 
+    const body = await req.json();
     const {
       _id,
       sno,
@@ -64,85 +106,86 @@ export async function POST(req) {
       email,
       phone,
       isVeg,
-    } = await req.json();
+    } = body;
 
-    const logoImageData = typeof logo === "string" ? logo : logo?.data;
-    const bannerImageData = typeof banner === "string" ? banner : banner?.data;
+    if (!isPositiveInteger(sno)) {
+      throw Object.assign(new Error("S.No. must be a positive integer"), {
+        statusCode: 400,
+      });
+    }
 
-    const maxSno = await RestaurentModel.findOne({}).sort({ sno: -1 });
-
-    if (!title) {
+    if (typeof title !== "string" || !title.trim()) {
       throw Object.assign(new Error("Title is required"), { statusCode: 400 });
     }
 
-    if (!category) {
+    if (typeof category !== "string" || !category.trim()) {
       throw Object.assign(new Error("Category is required"), {
         statusCode: 400,
       });
     }
 
-    if (!RESTAURANT_CATEGORIES_ENUM.includes(category)) {
+    const normalizedCategory = category.trim();
+    if (!RESTAURANT_CATEGORIES_ENUM.includes(normalizedCategory)) {
       throw Object.assign(new Error("Invalid category"), { statusCode: 400 });
     }
 
-    if (!description) {
-      throw Object.assign(new Error("Description is required"), {
-        statusCode: 400,
-      });
-    }
-
-    if (!logo) {
-      throw Object.assign(new Error("Logo is required"), { statusCode: 400 });
-    }
-
-    if (!banner) {
-      throw Object.assign(new Error("Banner is required"), { statusCode: 400 });
-    }
-
-    if (!location) {
-      throw Object.assign(new Error("Location is required"), {
-        statusCode: 400,
-      });
-    }
-
-    if (!shortLocation) {
+    if (typeof shortLocation !== "string" || !shortLocation.trim()) {
       throw Object.assign(new Error("Short location is required"), {
         statusCode: 400,
       });
     }
 
-    if (!LOCATION_ENUM.includes(shortLocation)) {
+    const normalizedShortLocation = shortLocation.trim();
+    if (!LOCATION_ENUM.includes(normalizedShortLocation)) {
       throw Object.assign(new Error("Invalid short location"), {
         statusCode: 400,
       });
     }
 
-    if (!email) {
-      throw Object.assign(new Error("Email is required"), { statusCode: 400 });
+    const normalizedIsVeg = normalizeFoodType(isVeg);
+    if (normalizedIsVeg === null) {
+      throw Object.assign(new Error("Food type is required"), {
+        statusCode: 400,
+      });
     }
 
-    const checkEmail = isValidEmail(email);
-
-    if (!checkEmail.status) {
-      throw Object.assign(new Error(checkEmail.message), { statusCode: 400 });
+    const normalizedTitle = title.trim();
+    const slug = createSlug(normalizedTitle);
+    if (!slug) {
+      throw Object.assign(
+        new Error("A valid slug could not be generated from the title"),
+        { statusCode: 400 },
+      );
     }
 
-    if (!phone) {
-      throw Object.assign(new Error("Phone is required"), { statusCode: 400 });
+    if (email !== undefined && email !== null && email !== "") {
+      if (typeof email !== "string") {
+        throw Object.assign(new Error("Email must be a string"), {
+          statusCode: 400,
+        });
+      }
+
+      const checkEmail = isValidEmail(email);
+      if (!checkEmail.status) {
+        throw Object.assign(new Error(checkEmail.message), { statusCode: 400 });
+      }
     }
 
-    const checkPhone = isValidPhoneNumber(phone);
+    if (phone !== undefined && phone !== null && phone !== "") {
+      if (typeof phone !== "string") {
+        throw Object.assign(new Error("Phone must be a string"), {
+          statusCode: 400,
+        });
+      }
 
-    if (!checkPhone.status) {
-      throw Object.assign(new Error(checkPhone.message), { statusCode: 400 });
+      const checkPhone = isValidPhoneNumber(phone);
+      if (!checkPhone.status) {
+        throw Object.assign(new Error(checkPhone.message), { statusCode: 400 });
+      }
     }
 
     if (_id) {
-      if (!sno) {
-        throw Object.assign(new Error("S No is required"), { statusCode: 400 });
-      }
-
-      const restaurent = await RestaurentModel.findById(_id);
+      const restaurent = await RestaurentModel.findById(_id).session(session);
 
       if (!restaurent) {
         throw Object.assign(new Error("Restaurent not found"), {
@@ -150,112 +193,66 @@ export async function POST(req) {
         });
       }
 
-      if (sno < restaurent.sno) {
+      const updatedSno = Number(sno);
+      if (updatedSno < restaurent.sno) {
         await RestaurentModel.updateMany(
-          { sno: { $gte: sno, $lt: restaurent.sno } },
+          { sno: { $gte: updatedSno, $lt: restaurent.sno, _id: { $ne: _id } } },
           { $inc: { sno: 1 } },
           { session },
         );
       }
 
-      if (sno > restaurent.sno) {
+      if (updatedSno > restaurent.sno) {
         await RestaurentModel.updateMany(
-          { sno: { $gt: restaurent.sno, $lte: sno } },
+          { sno: { $gt: restaurent.sno, $lte: updatedSno, _id: { $ne: _id } } },
           { $inc: { sno: -1 } },
           { session },
         );
       }
 
-      // Log image input details without printing the complete image data.
-      console.log("Restaurant logo type:", typeof logo);
-      console.log(
-        "Restaurant logo data URL:",
-        typeof logoImageData === "string" &&
-          logoImageData.startsWith("data:image/"),
-      );
-      console.log("Restaurant banner type:", typeof banner);
-      console.log(
-        "Restaurant banner data URL:",
-        typeof bannerImageData === "string" &&
-          bannerImageData.startsWith("data:image/"),
-      );
-
-      const uploadedLogo = await uploadImage(
-        logoImageData,
+      const uploadedLogo = await uploadRestaurantImage(
+        logo,
         "braj_deals/restaurent/logos",
-        1024 * 1024,
+        5 * 1024 * 1024,
       );
-
-      console.log(
-        "Restaurant logo upload result:",
-        uploadedLogo
-          ? {
-              hasSecureUrl: Boolean(uploadedLogo.secure_url),
-              hasPublicId: Boolean(uploadedLogo.public_id),
-            }
-          : null,
-      );
-
-      const uploadedBanner = await uploadImage(
-        bannerImageData,
+      if (uploadedLogo?.publicId) uploadedPublicIds.push(uploadedLogo.publicId);
+      const uploadedBanner = await uploadRestaurantImage(
+        banner,
         "braj_deals/restaurent/banners",
-        1024 * 1024 * 2,
+        5 * 1024 * 1024,
       );
+      if (uploadedBanner?.publicId) uploadedPublicIds.push(uploadedBanner.publicId);
 
-      console.log(
-        "Restaurant banner upload result:",
-        uploadedBanner
-          ? {
-              hasSecureUrl: Boolean(uploadedBanner.secure_url),
-              hasPublicId: Boolean(uploadedBanner.public_id),
-            }
-          : null,
-      );
+      const update = {
+        sno: updatedSno,
+        title: normalizedTitle,
+        slug,
+        category: normalizedCategory,
+        shortLocation: normalizedShortLocation,
+        isVeg: normalizedIsVeg,
+        ...(uploadedLogo ? { logo: uploadedLogo } : {}),
+        ...(uploadedBanner ? { banner: uploadedBanner } : {}),
+      };
+      for (const field of ["description", "mapLink", "location", "email", "phone"]) {
+        if (Object.prototype.hasOwnProperty.call(body, field)) {
+          update[field] = typeof body[field] === "string" ? body[field].trim() : "";
+        }
+      }
 
       const updatedRestaurent = await RestaurentModel.findByIdAndUpdate(
         _id,
-        {
-          sno: maxSno?.sno >= sno ? sno : maxSno?.sno,
-          title,
-          slug: title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, ""),
-          category,
-          description,
-          logo:
-            uploadedLogo?.secure_url && uploadedLogo?.public_id
-              ? {
-                  url: uploadedLogo.secure_url,
-                  publicId: uploadedLogo.public_id,
-                }
-              : restaurent.logo,
-          banner:
-            uploadedBanner?.secure_url && uploadedBanner?.public_id
-              ? {
-                  url: uploadedBanner.secure_url,
-                  publicId: uploadedBanner.public_id,
-                }
-              : restaurent.banner,
-          mapLink,
-          location,
-          shortLocation,
-          email,
-          phone,
-          isVeg,
-        },
-        { new: true, session },
+        update,
+        { new: true, session, runValidators: true },
       );
 
       await session.commitTransaction();
-      session.endSession();
-      session = null;
+      transactionCommitted = true;
 
-      if (uploadedLogo?.secure_url && restaurent.logo?.publicId) {
+      if (uploadedLogo && restaurent.logo?.publicId) {
         await deleteImage(restaurent.logo.publicId);
       }
 
-      if (uploadedBanner?.secure_url && restaurent.banner?.publicId) {
+      if (uploadedBanner && restaurent.banner?.publicId) {
         await deleteImage(restaurent.banner.publicId);
       }
 
@@ -274,105 +271,52 @@ export async function POST(req) {
     }
 
     // CREATE RESTAURANT
-    const snoPresent = await RestaurentModel.findOne({ sno });
+    const numericSno = Number(sno);
+    const snoPresent = await RestaurentModel.findOne({ sno: numericSno }).session(
+      session,
+    );
 
     if (snoPresent) {
       await RestaurentModel.updateMany(
-        { sno: { $gte: sno } },
+        { sno: { $gte: numericSno } },
         { $inc: { sno: 1 } },
         { session },
       );
     }
 
-    // Diagnostic logs: inspect the image values received from the frontend.
-    console.log("Restaurant logo type:", typeof logo);
-    console.log(
-      "Restaurant logo data URL:",
-      typeof logoImageData === "string" &&
-        logoImageData.startsWith("data:image/"),
-    );
-    console.log("Restaurant banner type:", typeof banner);
-    console.log(
-      "Restaurant banner data URL:",
-      typeof bannerImageData === "string" &&
-        bannerImageData.startsWith("data:image/"),
-    );
-
-    const uploadedLogo = await uploadImage(
-      logoImageData,
+    const uploadedLogo = await uploadRestaurantImage(
+      logo,
       "braj_deals/restaurent/logos",
-      1024 * 1024,
+      5 * 1024 * 1024,
     );
-
-    console.log(
-      "Restaurant logo upload result:",
-      uploadedLogo
-        ? {
-            hasSecureUrl: Boolean(uploadedLogo.secure_url),
-            hasPublicId: Boolean(uploadedLogo.public_id),
-          }
-        : null,
-    );
-
-    if (!uploadedLogo?.secure_url || !uploadedLogo?.public_id) {
-      throw new Error(
-        "Logo upload failed. Check the frontend image format and uploadImage utility.",
-      );
-    }
-
-    const uploadedBanner = await uploadImage(
-      bannerImageData,
+    if (uploadedLogo?.publicId) uploadedPublicIds.push(uploadedLogo.publicId);
+    const uploadedBanner = await uploadRestaurantImage(
+      banner,
       "braj_deals/restaurent/banners",
-      1024 * 1024 * 2,
+      5 * 1024 * 1024,
     );
-
-    console.log(
-      "Restaurant banner upload result:",
-      uploadedBanner
-        ? {
-            hasSecureUrl: Boolean(uploadedBanner.secure_url),
-            hasPublicId: Boolean(uploadedBanner.public_id),
-          }
-        : null,
-    );
-
-    if (!uploadedBanner?.secure_url || !uploadedBanner?.public_id) {
-      await deleteImage(uploadedLogo.public_id);
-      throw new Error(
-        "Banner upload failed. Check the frontend image format and uploadImage utility.",
-      );
-    }
+    if (uploadedBanner?.publicId) uploadedPublicIds.push(uploadedBanner.publicId);
 
     const newRestaurent = new RestaurentModel({
-      sno: sno ? sno : maxSno?.sno ? maxSno.sno + 1 : 1,
-      title,
-      slug: title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, ""),
-      category,
-      description,
-      logo: {
-        url: uploadedLogo.secure_url,
-        publicId: uploadedLogo.public_id,
-      },
-      banner: {
-        url: uploadedBanner.secure_url,
-        publicId: uploadedBanner.public_id,
-      },
-      mapLink,
-      location,
-      shortLocation,
-      email,
-      phone,
-      isVeg,
+      sno: numericSno,
+      title: normalizedTitle,
+      slug,
+      category: normalizedCategory,
+      shortLocation: normalizedShortLocation,
+      isVeg: normalizedIsVeg,
+      description: typeof description === "string" ? description.trim() : "",
+      logo: uploadedLogo,
+      banner: uploadedBanner,
+      mapLink: typeof mapLink === "string" ? mapLink.trim() : "",
+      location: typeof location === "string" ? location.trim() : "",
+      email: typeof email === "string" ? email.trim() : "",
+      phone: typeof phone === "string" ? phone.trim() : "",
     });
 
     await newRestaurent.save({ session });
 
     await session.commitTransaction();
-    session.endSession();
-    session = null;
+    transactionCommitted = true;
 
     revalidatePath("/categories/restaurants");
     revalidatePath(`/categories/restaurants/${newRestaurent?.slug}`);
@@ -387,25 +331,40 @@ export async function POST(req) {
       { status: 201 },
     );
   } catch (error) {
-    if (session) {
+    if (session?.inTransaction()) {
       try {
         await session.abortTransaction();
       } catch (transactionError) {
         console.error("Transaction rollback failed:", transactionError);
       }
-
-      session.endSession();
     }
 
     console.error("Restaurant creation failed:", error);
+    if (!transactionCommitted) {
+      for (const publicId of uploadedPublicIds) {
+        try {
+          await deleteImage(publicId);
+        } catch (cleanupError) {
+          console.error("Failed to clean up restaurant image:", cleanupError);
+        }
+      }
+    }
 
     return NextResponse.json(
       {
         status: "error",
+        data: null,
         message: error.message || "Something went wrong",
+        error: error.message || "Something went wrong",
       },
-      { status: error.statusCode || 500 },
+      {
+        status:
+          error.statusCode ||
+          (error instanceof mongoose.Error.ValidationError ? 400 : 500),
+      },
     );
+  } finally {
+    if (session) await session.endSession();
   }
 }
 
@@ -567,9 +526,9 @@ export async function DELETE(req) {
     await AmenityModel.deleteMany({ restaurentId: _id }, { session });
 
     const galleries = await GalleryModel.find({ restaurentId: _id });
-    const galleriesPublicIds = galleries.map(
-      (gallery) => gallery.image.publicId,
-    );
+    const galleriesPublicIds = galleries
+      .map((gallery) => gallery.image?.publicId)
+      .filter(Boolean);
 
     await GalleryModel.deleteMany({ restaurentId: _id }, { session });
 
@@ -578,9 +537,9 @@ export async function DELETE(req) {
 
     await bulkDeleteImages([
       ...galleriesPublicIds,
-      deleted.logo.publicId,
-      deleted.banner.publicId,
-    ]);
+      deleted.logo?.publicId,
+      deleted.banner?.publicId,
+    ].filter(Boolean));
 
     return NextResponse.json(
       {

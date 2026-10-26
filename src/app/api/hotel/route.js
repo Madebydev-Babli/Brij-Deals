@@ -37,6 +37,28 @@ function hasOwn(value, key) {
     return Object.prototype.hasOwnProperty.call(value, key);
 }
 
+function isPositiveInteger(value) {
+    return (
+        (typeof value === "number" || (typeof value === "string" && value.trim() !== "")) &&
+        Number.isInteger(Number(value)) &&
+        Number(value) > 0
+    );
+}
+
+function getHotelPostErrorMessage(error) {
+    if (error?.code === 11000) {
+        return "A hotel with this slug already exists";
+    }
+
+    if (error instanceof mongoose.Error.ValidationError) {
+        return Object.values(error.errors)
+            .map((validationError) => validationError.message)
+            .join(", ");
+    }
+
+    return error?.message || "Failed to create hotel";
+}
+
 function normalizeOffers(offers) {
     if (!Array.isArray(offers)) throw Object.assign(new Error("Offers must be an array"), { statusCode: 400 });
     return offers.map((offer) => ({
@@ -66,7 +88,7 @@ function normalizeAttractions(attractions) {
     }));
 }
 
-async function uploadSingleImage(imageData, folder, maxSize = 1024 * 1024 * 2) {
+async function uploadSingleImage(imageData, folder, maxSize = 5 * 1024 * 1024) {
     if (!imageData?.data) return null;
     const uploaded = await uploadImage(imageData.data, folder, maxSize);
     const normalized = normalizeUploadedImage(uploaded);
@@ -212,33 +234,45 @@ export async function POST(req) {
             gallery = [],
         } = body;
 
-        if (!title?.trim()) {
+        if (typeof title !== "string" || !title.trim()) {
+            await session.abortTransaction();
             return NextResponse.json({ status: "error", message: "Title is required", data: null, error: "Title is required" }, { status: 400 });
         }
 
-        if (!description?.trim()) {
-            return NextResponse.json({ status: "error", message: "Description is required", data: null, error: "Description is required" }, { status: 400 });
+        if (typeof receivedSlug !== "string" || !receivedSlug.trim()) {
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Slug is required", data: null, error: "Slug is required" }, { status: 400 });
         }
 
-        if (!location?.trim()) {
-            return NextResponse.json({ status: "error", message: "Location is required", data: null, error: "Location is required" }, { status: 400 });
-        }
-
-        if (!shortLocation?.trim()) {
+        if (typeof shortLocation !== "string" || !shortLocation.trim()) {
+            await session.abortTransaction();
             return NextResponse.json({ status: "error", message: "Short location is required", data: null, error: "Short location is required" }, { status: 400 });
         }
 
-        if (!startingPrice && startingPrice !== 0) {
-            return NextResponse.json({ status: "error", message: "Starting Price is required", data: null, error: "Starting Price is required" }, { status: 400 });
+        if ((!_id || hasOwn(body, "sno")) && !isPositiveInteger(sno)) {
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Invalid serial number", data: null, error: "Invalid serial number" }, { status: 400 });
         }
 
-        if (!Number.isFinite(Number(startingPrice)) || Number(startingPrice) < 0) {
+        const priceIsEmpty = startingPrice === undefined ||
+            startingPrice === null ||
+            (typeof startingPrice === "string" && !startingPrice.trim());
+        const normalizedStartingPrice = priceIsEmpty
+            ? 0
+            : Number(startingPrice);
+        if (
+            (!priceIsEmpty && typeof startingPrice !== "number" && typeof startingPrice !== "string") ||
+            !Number.isFinite(normalizedStartingPrice) ||
+            normalizedStartingPrice < 0
+        ) {
+            await session.abortTransaction();
             return NextResponse.json({ status: "error", message: "Starting Price must be a valid positive number", data: null, error: "Starting Price must be a valid positive number" }, { status: 400 });
         }
 
-        const generatedSlug = createSlug(title) || createSlug(receivedSlug);
+        const generatedSlug = createSlug(receivedSlug);
         if (!generatedSlug) {
-            return NextResponse.json({ status: "error", message: "Valid title or slug is required", data: null, error: "Valid title or slug is required" }, { status: 400 });
+            await session.abortTransaction();
+            return NextResponse.json({ status: "error", message: "Valid slug is required", data: null, error: "Valid slug is required" }, { status: 400 });
         }
 
         const lastHotel = await HotelModel.findOne({}).sort({ sno: -1 }).select("sno").session(session);
@@ -258,9 +292,9 @@ export async function POST(req) {
             }
 
             let updatedSno = existingHotel.sno;
-            if (sno !== undefined && sno !== null && sno !== "") {
+            if (hasOwn(body, "sno")) {
                 updatedSno = Number(sno);
-                if (!Number.isInteger(updatedSno) || updatedSno < 1) {
+                if (!isPositiveInteger(sno)) {
                     await session.abortTransaction();
                     return NextResponse.json({ status: "error", message: "Invalid serial number", data: null, error: "Invalid serial number" }, { status: 400 });
                 }
@@ -308,11 +342,15 @@ export async function POST(req) {
             existingHotel.sno = updatedSno;
             existingHotel.slug = generatedSlug;
             existingHotel.title = title.trim();
-            existingHotel.description = description.trim();
+            if (hasOwn(body, "description")) {
+                existingHotel.description = typeof description === "string" ? description.trim() : "";
+            }
             existingHotel.image = updatedImage;
             existingHotel.logo = updatedLogo;
             existingHotel.banner = updatedBanner;
-            existingHotel.location = location.trim();
+            if (hasOwn(body, "location")) {
+                existingHotel.location = typeof location === "string" ? location.trim() : "";
+            }
             existingHotel.shortLocation = shortLocation.trim();
             if (hasOwn(body, "mapLink")) existingHotel.mapLink = mapLink?.trim() || "";
             if (hasOwn(body, "openingTime")) existingHotel.openingTime = openingTime?.trim() || "";
@@ -327,7 +365,7 @@ export async function POST(req) {
             if (hasOwn(body, "rating")) existingHotel.rating = Number(rating) || 0;
             if (hasOwn(body, "reviewCount")) existingHotel.reviewCount = Number(reviewCount) || 0;
             if (hasOwn(body, "googleReview")) existingHotel.googleReview = googleReview?.trim() || "";
-            existingHotel.startingPrice = Number(startingPrice);
+            if (hasOwn(body, "startingPrice")) existingHotel.startingPrice = normalizedStartingPrice;
             if (normalizedRoomCategories) existingHotel.roomCategories = normalizedRoomCategories;
             if (normalizedOffers) existingHotel.offers = normalizedOffers;
             if (normalizedAmenities) existingHotel.amenities = normalizedAmenities;
@@ -355,31 +393,9 @@ export async function POST(req) {
             return NextResponse.json({ status: "error", message: "A hotel with this slug already exists", data: null, error: "A hotel with this slug already exists" }, { status: 409 });
         }
 
-        let newSno = maxSno + 1;
-        if (sno !== undefined && sno !== null && sno !== "") {
-            newSno = Number(sno);
-            if (!Number.isInteger(newSno) || newSno < 1) {
-                await session.abortTransaction();
-                return NextResponse.json({ status: "error", message: "Invalid serial number", data: null, error: "Invalid serial number" }, { status: 400 });
-            }
-            if (newSno <= maxSno) {
-                await HotelModel.updateMany({ sno: { $gte: newSno } }, { $inc: { sno: 1 } }).session(session);
-            }
-        }
-
-        if (!image?.data) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Hotel image is required", data: null, error: "Hotel image is required" }, { status: 400 });
-        }
-
-        if (!logo?.data) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Hotel logo is required", data: null, error: "Hotel logo is required" }, { status: 400 });
-        }
-
-        if (!banner?.data) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Hotel banner is required", data: null, error: "Hotel banner is required" }, { status: 400 });
+        const newSno = Number(sno);
+        if (newSno <= maxSno) {
+            await HotelModel.updateMany({ sno: { $gte: newSno } }, { $inc: { sno: 1 } }).session(session);
         }
 
         const uploadedImage = await uploadSingleImage(image, "braj_deals/hotels");
@@ -391,20 +407,15 @@ export async function POST(req) {
         const amenitiesPayload = normalizeAmenities(amenities);
         const attractionsPayload = normalizeAttractions(attractions);
 
-        if (!uploadedImage || !uploadedLogo || !uploadedBanner) {
-            await session.abortTransaction();
-            return NextResponse.json({ status: "error", message: "Image upload failed", data: null, error: "Image upload failed" }, { status: 500 });
-        }
-
         const newHotel = new HotelModel({
             sno: newSno,
             slug: generatedSlug,
             title: title.trim(),
-            description: description.trim(),
+            description: typeof description === "string" ? description.trim() : "",
             image: uploadedImage,
             logo: uploadedLogo,
             banner: uploadedBanner,
-            location: location.trim(),
+            location: typeof location === "string" ? location.trim() : "",
             shortLocation: shortLocation.trim(),
             mapLink: mapLink?.trim() || "",
             openingTime: openingTime?.trim() || "",
@@ -419,7 +430,7 @@ export async function POST(req) {
             rating: Number(rating) || 0,
             reviewCount: Number(reviewCount) || 0,
             googleReview: googleReview?.trim() || "",
-            startingPrice: Number(startingPrice),
+            startingPrice: normalizedStartingPrice,
             roomCategories: roomCategoriesPayload,
             offers: offersPayload,
             amenities: amenitiesPayload,
@@ -435,16 +446,21 @@ export async function POST(req) {
 
         return NextResponse.json({ status: "success", message: "Hotel added successfully", data: { data: [newHotel] }, error: null }, { status: 201 });
     } catch (error) {
-        try {
-            if (session) await session.abortTransaction();
-        } catch (abortError) {
-            console.error("Hotel transaction abort failed:", abortError);
+        console.error("Hotel POST API Error:", error);
+
+        if (session?.inTransaction()) {
+            try {
+                await session.abortTransaction();
+            } catch (abortError) {
+                console.error("Hotel POST transaction abort failed:", abortError);
+            }
         }
 
-        const errorMessage = await getErrorMessage(error, session);
-        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: error.statusCode || 500 });
+        const errorMessage = getHotelPostErrorMessage(error);
+        const statusCode = error.statusCode || (error instanceof mongoose.Error.ValidationError ? 400 : 500);
+        return NextResponse.json({ status: "error", data: null, message: errorMessage, error: errorMessage }, { status: statusCode });
     } finally {
-        if (session) session.endSession();
+        if (session) await session.endSession();
     }
 }
 

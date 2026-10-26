@@ -106,9 +106,9 @@ export default function EditReligiousShopPage() {
         });
     }
 
-    function handleBasicInfoSubmit(event) {
+    function handleBasicInfoSubmit(event, validatedFormData) {
         event.preventDefault();
-        saveShop(formData);
+        saveShop(validatedFormData);
     }
 
     function handleSectionSave(changes, onSuccess) {

@@ -10,9 +10,8 @@ import {
   handleImageChange,
   handleInputChange,
 } from "@/utility/utility-function";
+import { hasMeaningfulBlogContent } from "@/utility/blog-validation";
 import RichTextEditor from "@/client-components/RichEditorText";
-const [categories, setCategories] = useState([]);
-const [loadingCategories, setLoadingCategories] = useState(true);
 
 const initialFormData = {
   sno: "",
@@ -33,6 +32,7 @@ export default function EditBlogPage() {
 
   const [formData, setFormData] = useState(initialFormData);
   const [loadedBlogId, setLoadedBlogId] = useState(null);
+  const [contentError, setContentError] = useState("");
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -62,7 +62,47 @@ export default function EditBlogPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    fetchPostAPI(API_ENDPOINTS.ADD_BLOG, formData, "/dashboard/blogs");
+
+    const form = e.currentTarget;
+    const serialNumber = Number(formData.sno);
+    const snoField = form.elements.namedItem("sno");
+    snoField.setCustomValidity(
+      Number.isInteger(serialNumber) && serialNumber > 0
+        ? ""
+        : "S.No. must be a positive integer",
+    );
+
+    for (const name of ["title", "slug", "author", "category", "date", "description"]) {
+      const field = form.elements.namedItem(name);
+      const value = formData[name];
+      field.setCustomValidity(
+        typeof value === "string" && value.trim() ? "" : "This field is required",
+      );
+    }
+
+    if (!form.reportValidity()) return;
+
+    if (!hasMeaningfulBlogContent(formData.content)) {
+      setContentError("Blog content is required.");
+      return;
+    }
+
+    setContentError("");
+    fetchPostAPI(
+      API_ENDPOINTS.ADD_BLOG,
+      {
+        ...formData,
+        sno: serialNumber,
+        title: formData.title.trim(),
+        slug: formData.slug.trim(),
+        author: formData.author.trim(),
+        category: formData.category.trim(),
+        date: formData.date.trim(),
+        description: formData.description.trim(),
+        content: formData.content.trim(),
+      },
+      "/dashboard/blogs",
+    );
   }
 
   useEffect(() => {
@@ -77,28 +117,35 @@ export default function EditBlogPage() {
 
   return (
     <section>
-      <form onSubmit={handleSubmit}>
+      <form
+        onSubmit={handleSubmit}
+        onChange={(event) => event.target.setCustomValidity?.("")}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="sno" className="form-label">
-              S.No.
+              S.No. <span className="text-red-600">*</span>
             </label>
             <input
               placeholder="Enter the serial number"
-              type="text"
+              type="number"
+              min="1"
+              step="1"
               id="sno"
               name="sno"
               value={formData.sno}
               onChange={(e) => {
+                e.currentTarget.setCustomValidity("");
                 handleInputChange(e, setFormData);
               }}
               className="form-input"
+              required
             />
           </div>
 
           <div>
             <label htmlFor="title" className="form-label">
-              Title
+              Title <span className="text-red-600">*</span>
             </label>
             <input
               placeholder="Enter the blog title"
@@ -107,15 +154,17 @@ export default function EditBlogPage() {
               name="title"
               value={formData.title}
               onChange={(e) => {
+                e.currentTarget.setCustomValidity("");
                 handleInputChange(e, setFormData);
               }}
               className="form-input"
+              required
             />
           </div>
 
           <div>
             <label htmlFor="slug" className="form-label">
-              Slug
+              Slug <span className="text-red-600">*</span>
             </label>
             <input
               placeholder="Enter the blog slug"
@@ -124,15 +173,17 @@ export default function EditBlogPage() {
               name="slug"
               value={formData.slug}
               onChange={(e) => {
+                e.currentTarget.setCustomValidity("");
                 handleInputChange(e, setFormData);
               }}
               className="form-input"
+              required
             />
           </div>
 
           <div>
             <label htmlFor="author" className="form-label">
-              Author
+              Author <span className="text-red-600">*</span>
             </label>
             <input
               placeholder="Enter the author name"
@@ -141,15 +192,17 @@ export default function EditBlogPage() {
               name="author"
               value={formData.author}
               onChange={(e) => {
+                e.currentTarget.setCustomValidity("");
                 handleInputChange(e, setFormData);
               }}
               className="form-input"
+              required
             />
           </div>
 
           <div>
             <label htmlFor="category" className="form-label">
-              Category
+              Category <span className="text-red-600">*</span>
             </label>
 
             <select
@@ -185,7 +238,7 @@ export default function EditBlogPage() {
 
           <div>
             <label htmlFor="date" className="form-label">
-              Date
+              Date <span className="text-red-600">*</span>
             </label>
             <input
               type="date"
@@ -196,6 +249,7 @@ export default function EditBlogPage() {
                 handleInputChange(e, setFormData);
               }}
               className="form-input"
+              required
             />
           </div>
         </div>
@@ -227,7 +281,7 @@ export default function EditBlogPage() {
 
         <div className="mb-4">
           <label htmlFor="description" className="form-label">
-            Short Description
+            Short Description <span className="text-red-600">*</span>
           </label>
           <textarea
             placeholder="Enter the short description"
@@ -239,21 +293,29 @@ export default function EditBlogPage() {
             }}
             rows="2"
             className="form-input"
+            required
           ></textarea>
         </div>
 
         <div className="mb-4">
-          <label className="form-label">Content</label>
+          <label className="form-label">
+            Blog Content <span className="text-red-600">*</span>
+          </label>
 
           <RichTextEditor
             value={formData.content || ""}
-            onChange={(value) =>
+            placeholder="Write the full blog content here..."
+            onChange={(value) => {
+              setContentError("");
               setFormData((prev) => ({
                 ...prev,
                 content: value,
-              }))
-            }
+              }));
+            }}
           />
+          {contentError && (
+            <p role="alert" className="mt-1 text-sm text-red-700">{contentError}</p>
+          )}
         </div>
 
         <div className="mt-6">

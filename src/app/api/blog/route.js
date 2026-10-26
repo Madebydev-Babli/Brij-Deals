@@ -5,6 +5,10 @@ import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { BlogModel } from "../../../../backend/models/blog";
 import {
+  hasMeaningfulBlogContent,
+  isValidBlogDate,
+} from "@/utility/blog-validation";
+import {
   clearSearch,
   deleteImage,
   getErrorMessage,
@@ -32,6 +36,18 @@ function normalizeUploadedImage(uploadedImage) {
   };
 }
 
+function isPositiveInteger(value) {
+  if (
+    (typeof value !== "number" && typeof value !== "string") ||
+    (typeof value === "string" && !value.trim())
+  ) {
+    return false;
+  }
+
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0;
+}
+
 export async function POST(req) {
   let session = null;
 
@@ -39,9 +55,21 @@ export async function POST(req) {
     await connectToDatabase();
 
     session = await mongoose.startSession();
-    session.startTransaction();
 
-    const decoded = await verifyToken(req);
+    let decoded;
+    try {
+      decoded = await verifyToken(req);
+    } catch {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Unauthorized access",
+          data: null,
+          error: "Unauthorized access",
+        },
+        { status: 401 },
+      );
+    }
 
     if (!decoded) {
       return NextResponse.json(
@@ -68,16 +96,29 @@ export async function POST(req) {
       category,
     } = await req.json();
 
-    const normalizedSlug = createSlug(slug || title);
+    const normalizedSlug = createSlug(slug);
+    const normalizedTitle = typeof title === "string" ? title.trim() : "";
+    const normalizedDescription = typeof description === "string" ? description.trim() : "";
+    const normalizedContent = typeof content === "string" ? content.trim() : "";
+    const normalizedAuthor = typeof author === "string" ? author.trim() : "";
+    const normalizedCategory = typeof category === "string" ? category.trim() : "";
+    const normalizedDate = typeof date === "string" ? date.trim() : "";
 
-    if (!title) {
+    if (!isPositiveInteger(sno)) {
       return NextResponse.json(
         {
           status: "error",
-          message: "Title is required",
+          message: "S.No. must be a positive integer",
           data: null,
-          error: "Title is required",
+          error: "S.No. must be a positive integer",
         },
+        { status: 400 },
+      );
+    }
+
+    if (!normalizedTitle) {
+      return NextResponse.json(
+        { status: "error", message: "Title is required", data: null, error: "Title is required" },
         { status: 400 },
       );
     }
@@ -86,63 +127,51 @@ export async function POST(req) {
       return NextResponse.json(
         {
           status: "error",
-          message: "Valid title is required",
+          message: "Valid slug is required",
           data: null,
-          error: "Valid title is required",
+          error: "Valid slug is required",
         },
         { status: 400 },
       );
     }
 
-    if (!description) {
+    if (!normalizedDescription) {
       return NextResponse.json(
         {
           status: "error",
-          message: "Description is required",
+          message: "Short description is required",
           data: null,
-          error: "Description is required",
+          error: "Short description is required",
         },
         { status: 400 },
       );
     }
 
-    if (!content) {
+    if (!hasMeaningfulBlogContent(normalizedContent)) {
       return NextResponse.json(
         {
           status: "error",
-          message: "Content is required",
+          message: "Blog content is required",
           data: null,
-          error: "Content is required",
+          error: "Blog content is required",
         },
         { status: 400 },
       );
     }
 
-    if (!image) {
+    if (!isValidBlogDate(normalizedDate)) {
       return NextResponse.json(
         {
           status: "error",
-          message: "Image is required",
+          message: "Date must be a valid date in YYYY-MM-DD format",
           data: null,
-          error: "Image is required",
+          error: "Date must be a valid date in YYYY-MM-DD format",
         },
         { status: 400 },
       );
     }
 
-    if (!date) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Date is required",
-          data: null,
-          error: "Date is required",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!author) {
+    if (!normalizedAuthor) {
       return NextResponse.json(
         {
           status: "error",
@@ -154,7 +183,7 @@ export async function POST(req) {
       );
     }
 
-    if (!category) {
+    if (!normalizedCategory) {
       return NextResponse.json(
         {
           status: "error",
@@ -166,24 +195,14 @@ export async function POST(req) {
       );
     }
 
+    session.startTransaction();
+
     /*
      * UPDATE BLOG
      */
 
     if (_id) {
       const requestedSno = Number(sno);
-
-      if (!Number.isInteger(requestedSno) || requestedSno < 1) {
-        return NextResponse.json(
-          {
-            status: "error",
-            message: "S.No. must be a positive integer",
-            data: null,
-            error: "Invalid S.No.",
-          },
-          { status: 400 },
-        );
-      }
 
       const blog = await BlogModel.findById(_id).session(session);
 
@@ -222,7 +241,7 @@ export async function POST(req) {
               await uploadImage(
                 image.data,
                 "braj_deals/blogs",
-                1024 * 1024 * 2,
+                5 * 1024 * 1024,
               ),
             )
           : null;
@@ -252,13 +271,13 @@ export async function POST(req) {
 
         if (item._id.toString() === _id.toString()) {
           Object.assign(update, {
-            title,
+            title: normalizedTitle,
             slug: normalizedSlug,
-            description,
-            content,
-            date,
-            author,
-            category,
+            description: normalizedDescription,
+            content: normalizedContent,
+            date: normalizedDate,
+            author: normalizedAuthor,
+            category: normalizedCategory,
             image: uploadedImage || blog.image,
           });
         }
@@ -274,8 +293,6 @@ export async function POST(req) {
       await BlogModel.bulkWrite(operations, { session });
 
       await session.commitTransaction();
-      session.endSession();
-      session = null;
 
       if (
         uploadedImage &&
@@ -317,16 +334,13 @@ export async function POST(req) {
         );
       }
 
-      const maxSno = await BlogModel.findOne({}).sort({ sno: -1 });
-
-      const snoPresent = await BlogModel.findOne({ sno });
+      const snoPresent = await BlogModel.findOne({ sno: Number(sno) }).session(session);
 
       if (snoPresent) {
         await BlogModel.updateMany(
-          { sno: { $gte: sno } },
+          { sno: { $gte: Number(sno) } },
           { $inc: { sno: 1 } },
-          { session },
-        );
+        ).session(session);
       }
 
       const uploadedImage =
@@ -335,31 +349,30 @@ export async function POST(req) {
               await uploadImage(
                 image.data,
                 "braj_deals/blogs",
-                1024 * 1024 * 2,
+                5 * 1024 * 1024,
               ),
             )
           : null;
 
-      if (!uploadedImage) {
+      if (image?.data && !uploadedImage) {
         throw new Error("Image upload failed");
       }
 
       const newBlog = new BlogModel({
-        sno: sno ? sno : maxSno?.sno ? maxSno.sno + 1 : 1,
-        title,
+        sno: Number(sno),
+        title: normalizedTitle,
         slug: normalizedSlug,
-        description,
-        content,
-        image: uploadedImage,
-        date,
-        author,
-        category,
+        description: normalizedDescription,
+        content: normalizedContent,
+        ...(uploadedImage ? { image: uploadedImage } : {}),
+        date: normalizedDate,
+        author: normalizedAuthor,
+        category: normalizedCategory,
       });
 
       await newBlog.save({ session });
 
       await session.commitTransaction();
-      session.endSession();
 
       revalidatePath("/");
       revalidatePath("/blogs");
@@ -375,7 +388,25 @@ export async function POST(req) {
       );
     }
   } catch (error) {
-    const errorMessage = await getErrorMessage(error, session);
+    console.error("Blog POST API Error:", error);
+    const validationMessage = error?.name === "ValidationError"
+      ? Object.values(error.errors || {})[0]?.message
+      : null;
+    const errorMessage = validationMessage
+      || (error?.code === 11000
+        ? error?.keyPattern?.slug
+          ? "Slug already exists"
+          : "Duplicate value already exists"
+        : error?.message === "Image upload failed"
+          ? error.message
+          : await getErrorMessage(error));
+    const status = validationMessage
+      ? 400
+      : error?.code === 11000
+        ? 409
+        : error?.isImageUploadError
+          ? error.statusCode
+          : 500;
 
     return NextResponse.json(
       {
@@ -384,8 +415,23 @@ export async function POST(req) {
         message: errorMessage,
         error: errorMessage,
       },
-      { status: 500 },
+      { status },
     );
+  } finally {
+    if (session) {
+      if (session.inTransaction()) {
+        try {
+          await session.abortTransaction();
+        } catch (abortError) {
+          console.error("Failed to abort Blog POST transaction:", abortError);
+        }
+      }
+      try {
+        await session.endSession();
+      } catch (endError) {
+        console.error("Failed to end Blog POST session:", endError);
+      }
+    }
   }
 }
 
@@ -557,9 +603,10 @@ export async function DELETE(req) {
     );
 
     await session.commitTransaction();
-    session.endSession();
 
-    await deleteImage(deleted.image.publicId);
+    if (deleted.image?.publicId) {
+      await deleteImage(deleted.image.publicId);
+    }
 
     revalidatePath("/");
     revalidatePath("/blogs");
@@ -575,7 +622,8 @@ export async function DELETE(req) {
       { status: 200 },
     );
   } catch (error) {
-    const errorMessage = await getErrorMessage(error, session);
+    console.error("Blog DELETE API Error:", error);
+    const errorMessage = await getErrorMessage(error);
 
     return NextResponse.json(
       {
@@ -586,5 +634,20 @@ export async function DELETE(req) {
       },
       { status: 500 },
     );
+  } finally {
+    if (session) {
+      if (session.inTransaction()) {
+        try {
+          await session.abortTransaction();
+        } catch (abortError) {
+          console.error("Failed to abort Blog DELETE transaction:", abortError);
+        }
+      }
+      try {
+        await session.endSession();
+      } catch (endError) {
+        console.error("Failed to end Blog DELETE session:", endError);
+      }
+    }
   }
 }

@@ -1,32 +1,46 @@
 import cloudinary from "../../backend/configurations/cloudinary.config";
+import {
+    getFriendlyImageUploadMessage,
+    getImageDataValidationCode,
+    MAX_IMAGE_UPLOAD_BYTES,
+} from "@/utility/image-upload";
 
-export async function uploadImage(image, folder, maxSize = 1024 * 1024) {
-    try {
+function createImageUploadError(error, statusCode = 502) {
+    const uploadError = new Error(getFriendlyImageUploadMessage(error));
+    uploadError.name = "ImageUploadError";
+    uploadError.code = error?.code;
+    uploadError.statusCode = statusCode;
+    uploadError.isImageUploadError = true;
+    return uploadError;
+}
 
-        if (typeof image?.startsWith === "function" && image?.startsWith("data:image")) {
-
-            const allowedTypes = ["image/png", "image/jpg", "image/jpeg"];
-
-            const mimeType = image.split(";")[0].split(":")[1];
-
-            if (!allowedTypes.includes(mimeType)) {
-                return { status: false, message: "Only PNG, JPG and JPEG images are allowed" };
-            }
-
-            const base64Data = image.split(",")[1];
-            const sizeInBytes = Buffer.from(base64Data, "base64").length;
-
-            if (sizeInBytes > maxSize) {
-                return { status: false, message: `Image size should not be greater than ${maxSize / 1024 / 1024} MB` };
-            }
-
-            return await cloudinary.uploader.upload(image, { folder });
-        }
-
+export async function uploadImage(image, folder, maxSize = MAX_IMAGE_UPLOAD_BYTES) {
+    if (typeof image?.startsWith !== "function" || !image.startsWith("data:image/")) {
         return null;
+    }
 
+    const validationCode = getImageDataValidationCode(image, maxSize);
+    if (validationCode) {
+        const statusCode = validationCode === "UNSUPPORTED_IMAGE_FORMAT"
+            ? 415
+            : validationCode === "IMAGE_TOO_LARGE"
+                ? 413
+                : 400;
+        const validationError = new Error(validationCode);
+        validationError.code = validationCode;
+        throw createImageUploadError(validationError, statusCode);
+    }
+
+    try {
+        return await cloudinary.uploader.upload(image, { folder });
     } catch (error) {
-        throw new Error("Image upload failed");
+        console.error("Cloudinary image upload failed:", {
+            name: error?.name,
+            message: error?.message,
+            code: error?.code,
+            http_code: error?.http_code,
+        });
+        throw createImageUploadError(error);
     }
 }
 
@@ -69,6 +83,10 @@ export async function getErrorMessage(error, session = null) {
             await session.abortTransaction();
         } catch (abortError) {
             console.log("[Session Abort Skipped]", abortError?.message || abortError);
+        }
+
+        if (error?.isImageUploadError) {
+            return error.message;
         }
 
         try {
