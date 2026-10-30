@@ -3,11 +3,14 @@
 import Image from 'next/image';
 import React, { useState } from 'react';
 import { FaPhoneAlt, FaWhatsapp, FaBed, FaUserFriends, FaTag } from 'react-icons/fa';
+import { getPublicImageUrl, hasPublicText } from "@/utility/public-content";
 
 export default function ProductListSection({ products, phone, whatsapp }) {
+    const validProducts = Array.isArray(products)
+        ? products.filter((product) => hasPublicText(product?.title))
+        : [];
 
-
-    if (!products || products.length === 0) return null;
+    if (!validProducts.length) return null;
 
     return (
         <section className="py-10">
@@ -37,10 +40,12 @@ export default function ProductListSection({ products, phone, whatsapp }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 pt-10">
 
-                    {products.map((product, index) => {
+                    {validProducts.map((product, index) => {
 
-                        const productImage = product?.image?.url || product?.image || "";
-                        const hasProductImage = Boolean(productImage && productImage.trim());
+                        const productImage = getPublicImageUrl(product?.image);
+                        const highlights = Array.isArray(product?.highlights)
+                            ? product.highlights.filter(hasPublicText)
+                            : [];
 
                         return (
 
@@ -50,39 +55,34 @@ export default function ProductListSection({ products, phone, whatsapp }) {
                                 <div className="sm:w-2/5 md:w-full xl:w-2/5 p-5 sm:p-2 md:p-5 xl:p-2 flex flex-col gap-4 border-r border-gray-100">
 
                                     {/* Separate Hero Image (Square) */}
+                                    {productImage && (
                                     <div className="aspect-square rounded-2xl overflow-hidden shadow-md border border-white relative">
-
-                                        {hasProductImage ? (
                                             <Image width={200} height={200} src={productImage} alt={product.title || "Product image"} className="w-full h-full object-cover object-center transition-all duration-500" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 text-primary font-bold text-sm uppercase tracking-wide">
-                                                No Image
-                                            </div>
-                                        )}
 
                                         {/* Price Tag */}
-                                        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 z-10">
+                                        {hasPublicText(product.offer) && <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 z-10">
                                             <FaTag className="text-primary w-2.5 h-2.5" />
                                             <span className="text-gray-900 text-[10px] sm:text-xs font-bold tracking-wider uppercase">
                                                 ₹{product.offer}
                                             </span>
-                                        </div>
+                                        </div>}
 
                                     </div>
+                                    )}
 
                                     {/* Booking Actions (Moved Here) */}
-                                    <div className="flex items-center gap-2 hidden sm:flex md:hidden xl:flex">
+                                    {(hasPublicText(phone) || hasPublicText(whatsapp)) && <div className="flex items-center gap-2 hidden sm:flex md:hidden xl:flex">
 
-                                        <a href={`tel:${phone}`} className="cursor-pointer flex items-center justify-center gap-2 py-3 w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
+                                        {hasPublicText(phone) && <a href={`tel:${phone}`} className="cursor-pointer flex items-center justify-center gap-2 py-3 w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
                                             <FaPhoneAlt />
                                             <span>Call Now</span>
-                                        </a>
+                                        </a>}
 
-                                        <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hello ${product?.title}, I have seen your hotel on Brij Deals, I want to know more about your hotel.`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-3 px-5 rounded-xl bg-green-100 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm">
+                                        {hasPublicText(whatsapp) && <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hello ${product?.title}, I have seen your hotel on Brij Deals, I want to know more about your hotel.`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-3 px-5 rounded-xl bg-green-100 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm">
                                             <FaWhatsapp size={20} />
-                                        </a>
+                                        </a>}
 
-                                    </div>
+                                    </div>}
 
                                 </div>
 
@@ -95,18 +95,19 @@ export default function ProductListSection({ products, phone, whatsapp }) {
                                             {product.title}
                                         </h3>
 
-                                        <h3 className="text-xl md:text-2xl font-semibold text-green-600 mt-1 mb-4">
+                                        {hasPublicText(product.originalPrice) && <h3 className="text-xl md:text-2xl font-semibold text-green-600 mt-1 mb-4">
                                             ₹{product.originalPrice}/-
-                                        </h3>
+                                        </h3>}
 
-                                        <p className="text-gray-500 font-nunito text-sm leading-relaxed mb-5">
+                                        {hasPublicText(product.description) && <p className="text-gray-500 font-nunito text-sm leading-relaxed mb-5">
                                             {product.description}
-                                        </p>
+                                        </p>}
 
                                         {/* Amenities Capsules (Placed Here) */}
+                                        {highlights.length > 0 && (
                                         <div className="border-t border-gray-50 pt-5">
                                             <div className="flex flex-wrap gap-2">
-                                                {product?.highlights?.map((highlight, idx) => (
+                                                {highlights.map((highlight, idx) => (
                                                     <div key={idx} className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-bold border border-gray-100 flex items-center gap-1.5 capitalize">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-[#F77F00]"></span>
                                                         {highlight}
@@ -114,21 +115,22 @@ export default function ProductListSection({ products, phone, whatsapp }) {
                                                 ))}
                                             </div>
                                         </div>
+                                        )}
 
                                     </div>
 
-                                    <div className="flex items-center gap-2 mt-5 sm:hidden md:flex xl:hidden">
+                                    {(hasPublicText(phone) || hasPublicText(whatsapp)) && <div className="flex items-center gap-2 mt-5 sm:hidden md:flex xl:hidden">
 
-                                        <a href={`tel:${phone}`} className="cursor-pointer flex items-center justify-center gap-2 py-3 w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
+                                        {hasPublicText(phone) && <a href={`tel:${phone}`} className="cursor-pointer flex items-center justify-center gap-2 py-3 w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
                                             <FaPhoneAlt />
                                             <span>Call Now</span>
-                                        </a>
+                                        </a>}
 
-                                        <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hello ${product?.title}, I have seen your hotel on Brij Deals, I want to know more about your hotel.`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-3 px-5 rounded-xl bg-green-100 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm">
+                                        {hasPublicText(whatsapp) && <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hello ${product?.title}, I have seen your hotel on Brij Deals, I want to know more about your hotel.`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-3 px-5 rounded-xl bg-green-100 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm">
                                             <FaWhatsapp size={20} />
-                                        </a>
+                                        </a>}
 
-                                    </div>
+                                    </div>}
 
                                 </div>
 
@@ -144,4 +146,3 @@ export default function ProductListSection({ products, phone, whatsapp }) {
         </section>
     );
 }
-

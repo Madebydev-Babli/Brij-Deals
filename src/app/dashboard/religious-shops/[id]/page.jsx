@@ -5,10 +5,10 @@ import { useParams } from "next/navigation";
 import { FaBoxOpen, FaInfoCircle, FaMapMarkerAlt, FaShareAlt } from "react-icons/fa";
 import ReligiousShopBasicInfoForm from "@/client-components/ReligiousShopBasicInfoForm";
 import {
-    ReligiousShopAttractionsTab,
     ReligiousShopProductsTab,
     ReligiousShopSocialMediaTab,
 } from "@/client-components/ReligiousShopTabs";
+import { AttractionsTab } from "@/client-components/AttractionsTab";
 import Tabs from "@/server-components/Tabs";
 import LoadingComponent from "@/server-components/LoadingComponent";
 import NoDataComponent from "@/server-components/NoDataComponent";
@@ -151,9 +151,11 @@ export default function EditReligiousShopPage() {
                 />
             )}
             {activeTab === "attractions" && (
-                <ReligiousShopAttractionsTab
-                    shop={formData}
-                    onSave={handleSectionSave}
+                <AttractionsTab
+                    entityType="religious-shop"
+                    entityId={formData._id}
+                    items={formData.attractions}
+                    onSave={(attractions, onSuccess) => handleSectionSave({ attractions }, onSuccess)}
                     saving={postingData}
                 />
             )}

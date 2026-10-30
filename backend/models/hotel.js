@@ -25,6 +25,14 @@ const amenitySchema = new mongoose.Schema(
   { _id: false },
 );
 
+const roomAmenitySchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    icon: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
 const attractionSchema = new mongoose.Schema(
   {
     title: { type: String, trim: true },
@@ -55,7 +63,7 @@ const roomCategorySchema = new mongoose.Schema(
     bedQuantity: { type: Number, default: 1 },
     guests: { type: Number, default: 1 },
     price: { type: String, trim: true },
-    amenities: { type: [String], default: [] },
+    amenities: { type: [roomAmenitySchema], default: [] },
   },
   { _id: false },
 );

@@ -409,18 +409,17 @@ export async function GET(req) {
 
         const searchQuery = {
             ...(cleanSearchValue ? {
-                $or: [
-                    { title: { $regex: cleanSearchValue, $options: "i" } },
-                    { description: { $regex: cleanSearchValue, $options: "i" } },
-                    { location: { $regex: cleanSearchValue, $options: "i" } },
-                    { shortLocation: { $regex: cleanSearchValue, $options: "i" } },
-                    { email: { $regex: cleanSearchValue, $options: "i" } },
-                    { phone: { $regex: cleanSearchValue, $options: "i" } },
-                    { whatsapp: { $regex: cleanSearchValue, $options: "i" } },
-                    { slug: { $regex: cleanSearchValue, $options: "i" } },
-                ],
+                title: {
+                    $regex: cleanSearchValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                    $options: "i",
+                },
             } : {}),
-            ...(cleanShortLocation ? { shortLocation: { $regex: cleanShortLocation, $options: "i" } } : {}),
+            ...(cleanShortLocation ? {
+                shortLocation: {
+                    $regex: cleanShortLocation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                    $options: "i",
+                },
+            } : {}),
         };
 
         const totalData = await ReligiousShopModel.countDocuments();

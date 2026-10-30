@@ -15,6 +15,7 @@ import Tabs from "@/server-components/Tabs";
 import { API_ENDPOINTS } from "@/utility/constants";
 import { useFetchDetailsAPI, useFetchPostAPI } from "@/utility/custom-hooks";
 import PlaceForm from "@/client-components/PlaceForm";
+import { AttractionsTab } from "@/client-components/AttractionsTab";
 
 const initialFormData = {
     _id: "",
@@ -134,15 +135,25 @@ export default function EditPlacePage() {
     return (
         <>
             <Tabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
-            <PlaceForm
-                formData={formData}
-                setFormData={setFormData}
-                onSubmit={handleSubmit}
-                onSaveSection={handleSectionSave}
-                postingData={postingData}
-                submitLabel="Update Place"
-                activeTab={activeTab}
-            />
+            {activeTab === "attractions" ? (
+                <AttractionsTab
+                    entityType="place"
+                    entityId={formData._id}
+                    items={formData.attractions}
+                    onSave={(attractions, onSuccess) => handleSectionSave("attractions", attractions, onSuccess)}
+                    saving={postingData}
+                />
+            ) : (
+                <PlaceForm
+                    formData={formData}
+                    setFormData={setFormData}
+                    onSubmit={handleSubmit}
+                    onSaveSection={handleSectionSave}
+                    postingData={postingData}
+                    submitLabel="Update Place"
+                    activeTab={activeTab}
+                />
+            )}
         </>
     );
 }

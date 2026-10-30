@@ -3,8 +3,20 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaMapMarkerAlt, FaShareAlt, FaStar, FaGlobe, FaRegClock, FaCamera, FaMap } from 'react-icons/fa';
+import { getGalleryImageUrl, getPublicImageUrl, hasPublicText } from "@/utility/public-content";
 
 export default function PlaceIntro({ place }) {
+    const bannerImage = getPublicImageUrl(place?.banner);
+    const location = hasPublicText(place?.location) ? place.location.trim() : "";
+    const scheduleCount = Array.isArray(place?.artiTimings)
+        ? place.artiTimings.filter((arti) => hasPublicText(arti?.name) && hasPublicText(arti?.time)).length
+        : 0;
+    const galleryCount = Array.isArray(place?.gallery)
+        ? place.gallery.filter((image) => Boolean(getGalleryImageUrl(image))).length
+        : 0;
+    const attractionCount = Array.isArray(place?.attractions)
+        ? place.attractions.filter((attraction) => hasPublicText(attraction?.title)).length
+        : 0;
 
     const breadcrumbs = [
         { label: 'Home', path: '/' },
@@ -18,7 +30,7 @@ export default function PlaceIntro({ place }) {
             {/* 1. Compact Banner Image */}
             <div className="relative w-full h-[200px] md:h-[280px] lg:h-[320px]">
 
-                {place?.banner && (<Image src={place.banner?.url || place.banner} alt={place?.title} fill className="w-full h-full object-cover" />)}
+                {bannerImage && (<Image src={bannerImage} alt={place?.title || ""} fill className="w-full h-full object-cover" />)}
 
                 {/* Dark gradient for breadcrumbs readability */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-transparent"></div>
@@ -88,57 +100,67 @@ export default function PlaceIntro({ place }) {
                                 {place?.title}
                             </h1>
 
-                            <div className="flex items-center justify-center lg:justify-start gap-2 mt-4 text-gray-500 font-nunito text-sm sm:text-base">
+                            {location && <div className="flex items-center justify-center lg:justify-start gap-2 mt-4 text-gray-500 font-nunito text-sm sm:text-base">
                                 <FaMapMarkerAlt className="text-primary/70" />
-                                <span>{place?.location || 'Brij Bhumi, Uttar Pradesh'}</span>
-                            </div>
+                                <span>{location}</span>
+                            </div>}
 
                         </div>
 
                         {/* Quick Info Grid (Right side, 2x2 layout) */}
+                        {(scheduleCount > 0 || location || galleryCount > 0 || attractionCount > 0) && (
                         <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full lg:w-auto shrink-0 mt-6 lg:mt-0 lg:min-w-[400px] xl:min-w-[450px]">
 
+                            {scheduleCount > 0 && (
                             <div className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50 hover:bg-amber-50 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
                                     <FaRegClock size={16} />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aarti</span>
-                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{place?.artiTimings?.length || 0} Schedules</span>
+                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{scheduleCount} Schedules</span>
                                 </div>
                             </div>
+                            )}
 
+                            {location && (
                             <div className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-orange-50/50 border border-orange-100/50 hover:bg-orange-50 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-primary shrink-0">
                                     <FaMapMarkerAlt size={16} />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Location</span>
-                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{place?.location || 'Mathura, UP'}</span>
+                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{location}</span>
                                 </div>
                             </div>
+                            )}
 
+                            {galleryCount > 0 && (
                             <div className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-blue-50/50 border border-blue-100/50 hover:bg-blue-50 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                                     <FaCamera size={16} />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gallery</span>
-                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{place?.gallery?.length || 0} Photos</span>
+                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{galleryCount} Photos</span>
                                 </div>
                             </div>
+                            )}
 
+                            {attractionCount > 0 && (
                             <div className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-green-50/50 border border-green-100/50 hover:bg-green-50 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
                                     <FaMap size={16} />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nearby</span>
-                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{place?.attractions?.length || 0} Places</span>
+                                    <span className="text-gray-900 font-bold font-nunito text-sm sm:text-base">{attractionCount} Places</span>
                                 </div>
                             </div>
+                            )}
 
                         </div>
+                        )}
 
                     </div>
 

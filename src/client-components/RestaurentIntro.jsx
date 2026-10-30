@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import Link from 'next/link';
 import { FaMapMarkerAlt, FaPhoneAlt, FaShareAlt, FaRegClock, FaInstagram, FaFacebookF, FaLinkedinIn, FaEnvelope, FaWhatsapp, FaLink, FaCheck, FaTimes, FaYoutube, FaGoogle, FaGlobe } from 'react-icons/fa';
 import Image from "next/image";
+import { getPublicImageUrl, getPublicLinkUrl, hasPublicText } from "@/utility/public-content";
 
-export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
+export default function RestaurentIntro({ restaurant, socialMedia, schedule, businessType = "restaurant" }) {
 
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -46,6 +47,24 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
     };
 
     const todayKey = getTodayKey();
+    const bannerImage = getPublicImageUrl(restaurant?.banner);
+    const logoImage = getPublicImageUrl(restaurant?.logo);
+    const location = hasPublicText(restaurant?.location) ? restaurant.location.trim() : "";
+    const mapLink = getPublicLinkUrl(restaurant?.mapLink);
+    const phone = hasPublicText(restaurant?.phone) ? restaurant.phone.trim() : "";
+    const email = hasPublicText(restaurant?.email) ? restaurant.email.trim() : "";
+    const website = getPublicLinkUrl(socialMedia?.website);
+    const instagram = getPublicLinkUrl(socialMedia?.instagram);
+    const facebook = getPublicLinkUrl(socialMedia?.facebook);
+    const youtube = getPublicLinkUrl(socialMedia?.youtube);
+    const whatsApp = hasPublicText(socialMedia?.whatsApp) ? socialMedia.whatsApp.trim() : "";
+    const validScheduleDays = days.filter((day) =>
+        hasPublicText(schedule?.[day.key]?.opening) &&
+        hasPublicText(schedule?.[day.key]?.closing),
+    );
+    const openingTime = hasPublicText(restaurant?.openingTime) ? restaurant.openingTime.trim() : "";
+    const closingTime = hasPublicText(restaurant?.closingTime) ? restaurant.closingTime.trim() : "";
+    const hasGeneralSchedule = Boolean(openingTime || closingTime);
 
     const formatTime = (time) => {
         if (!time) return "Closed";
@@ -60,13 +79,18 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
         return `${formattedHour}:${minute} ${ampm}`;
     };
 
-    const hasSchedule = schedule && days.some(d => schedule[d.key]?.opening);
+    const hasSchedule = validScheduleDays.length > 0;
+    const hasDesktopActions =
+        phone || website || instagram || facebook || youtube || whatsApp;
+    const hasDesktopSocialLinks = instagram || facebook || youtube || whatsApp;
 
-    // Placeholder Breadcrumb Data
+    const businessCategory = businessType === "hotel" ? "Hotels" : "Restaurants";
+    const businessPath = businessType === "hotel" ? "/categories/hotels-and-stays" : "/categories/restaurants";
+
     const breadcrumbs = [
         { label: "Home", path: '/' },
-        { label: 'Restaurants', path: '/categories/restaurants' },
-        { label: restaurant?.title, path: `/categories/restaurants/${restaurant?.slug}` },
+        { label: businessCategory, path: businessPath },
+        { label: restaurant?.title, path: `${businessPath}/${restaurant?.slug}` },
     ];
 
     return (
@@ -75,8 +99,8 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
             {/* 1. Banner Image */}
             <div className="relative w-full h-[250px] md:h-[350px] lg:h-[450px]">
 
-                {restaurant?.banner?.url && (
-                    <Image fill src={restaurant.banner.url} alt={restaurant?.title} className="w-full h-full object-cover" />
+                {bannerImage && (
+                    <Image fill src={bannerImage} alt={restaurant?.title || ""} className="w-full h-full object-cover" />
                 )}
 
                 {/* Dark gradient to ensure breadcrumbs readability */}
@@ -126,32 +150,25 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
                     <div className="flex flex-col md:flex-row gap-6 md:gap-8 lg:gap-12 w-full">
 
                         {/* Logo Wrapper */}
-                        <div className="shrink-0 -mt-24 md:-mt-24 lg:-mt-34 flex justify-center md:block">
-
-                            <div className="w-[150px] h-[150px] lg:w-[220px] lg:h-[220px] rounded-full border-[6px] lg:border-[8px] border-white shadow-xl bg-white overflow-hidden relative group">
-
-                                {restaurant?.logo?.url && (
-                                    <Image fill src={restaurant.logo.url} alt={restaurant?.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                )}
-                                <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-black/5 pointer-events-none"></div>
-
+                        {logoImage && (
+                            <div className="shrink-0 -mt-24 md:-mt-24 lg:-mt-34 flex justify-center md:block">
+                                <div className="w-[150px] h-[150px] lg:w-[220px] lg:h-[220px] rounded-full border-[6px] lg:border-[8px] border-white shadow-xl bg-white overflow-hidden relative group">
+                                    <Image fill src={logoImage} alt={restaurant?.title || ""} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-black/5 pointer-events-none"></div>
+                                </div>
                             </div>
+                        )}
 
+                        {(phone || email) && (
                             <div className="flex flex-col w-full gap-3 mt-5 lg:hidden md:flex hidden">
-
-                                <button className="cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
-                                    <FaPhoneAlt />
-                                    <a href={`tel:${restaurant?.phone}`}>Call Now</a>
-                                </button>
-
-                                <button className="cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-gray-800 hover:bg-gray-900 text-white font-nunito font-semibold transition-all shadow-md transform hover:-translate-y-0.5">
-                                    <FaEnvelope />
-                                    <a href={`mailto:${restaurant?.email}`}>Send Email</a>
-                                </button>
-
+                                {phone && <a className="cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5" href={`tel:${phone}`}>
+                                    <FaPhoneAlt /> Call Now
+                                </a>}
+                                {email && <a className="cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-gray-800 hover:bg-gray-900 text-white font-nunito font-semibold transition-all shadow-md transform hover:-translate-y-0.5" href={`mailto:${email}`}>
+                                    <FaEnvelope /> Send Email
+                                </a>}
                             </div>
-
-                        </div>
+                        )}
 
                         {/* Details Container */}
                         <div className="flex-1 w-full flex flex-col xl:flex-row xl:items-start justify-between gap-8 pt-2 md:pt-0">
@@ -213,63 +230,66 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
                                 </h1>
 
                                 {/* Meta Info (Location & Time) */}
-                                <div className="flex flex-col gap-2.5 items-center md:items-start">
+                                {(location || mapLink) && <div className="flex flex-col gap-2.5 items-center md:items-start">
                                     <div className="flex items-start gap-2 text-gray-600 font-nunito text-sm md:text-base">
+                                        {location && (
                                         <FaMapMarkerAlt className="text-primary mt-1 shrink-0" />
-                                        <span>{restaurant?.location}</span><a href={restaurant?.mapLink} className="text-blue-600 hover:text-primary">View on Map</a>
+                                        )}
+                                        {location && <span>{location}</span>}
+                                        {mapLink && <a href={mapLink} className="text-blue-600 hover:text-primary">View on Map</a>}
                                     </div>
-                                </div>
+                                </div>}
 
                             </div>
 
                             {/* Actions Container */}
-                            <div className="flex flex-col sm:flex-row xl:flex-col items-center xl:items-end gap-3 shrink-0 pt-2 xl:pt-0 border-t border-gray-100/80 xl:border-none w-full xl:w-auto">
+                            {(phone || email || website || instagram || facebook || youtube || whatsApp) && <div className={`flex flex-col sm:flex-row xl:flex-col items-center xl:items-end gap-3 shrink-0 pt-2 xl:pt-0 border-t border-gray-100/80 xl:border-none w-full xl:w-auto ${hasDesktopActions ? "" : "lg:hidden"}`}>
 
                                 {/* Primary Actions */}
                                 <div className="flex flex-col sm:flex-row xl:flex-col w-full gap-3">
 
-                                    <a href={`tel:${restaurant?.phone}`} className="lg:flex hidden cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
+                                    {phone && <a href={`tel:${phone}`} className="lg:flex hidden cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-primary hover:bg-primary/90 text-white font-nunito font-semibold transition-all shadow-md shadow-primary/20 transform hover:-translate-y-0.5">
                                         <FaPhoneAlt />
                                         <span>Call Now</span>
-                                    </a>
+                                    </a>}
 
-                                    <a href={socialMedia?.website} target="_blank" rel="noopener noreferrer" className="lg:flex hidden cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-gray-800 hover:bg-gray-900 text-white font-nunito font-semibold transition-all shadow-md transform hover:-translate-y-0.5">
+                                    {website && <a href={website} target="_blank" rel="noopener noreferrer" className="lg:flex hidden cursor-pointer flex items-center justify-center gap-2 px-8 h-12 w-full xl:w-[220px] rounded-full bg-gray-800 hover:bg-gray-900 text-white font-nunito font-semibold transition-all shadow-md transform hover:-translate-y-0.5">
                                         <FaGlobe />
                                         <span>Go To Website</span>
-                                    </a>
+                                    </a>}
 
                                     {/* Social Media Circular Buttons */}
-                                    <div className="flex items-center justify-center gap-2 pt-2 w-full xl:w-[220px]">
+                                    {(phone || email || instagram || facebook || youtube || whatsApp) && <div className={`flex items-center justify-center gap-2 pt-2 w-full xl:w-[220px] ${hasDesktopSocialLinks ? "" : "lg:hidden"}`}>
 
-                                        <a href={`tel:${restaurant?.phone}`} target="_blank" rel="noopener noreferrer" className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full bg-pink-50 text-blue-600 hover:bg-pink-600 hover:text-white transition-all border border-blue-100 transform hover:-translate-y-0.5 shadow-sm">
+                                        {phone && <a href={`tel:${phone}`} target="_blank" rel="noopener noreferrer" className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full bg-pink-50 text-blue-600 hover:bg-pink-600 hover:text-white transition-all border border-blue-100 transform hover:-translate-y-0.5 shadow-sm">
                                             <FaPhoneAlt size={20} />
-                                        </a>
+                                        </a>}
 
-                                        <a href={`mailto:${restaurant?.email}`} target="_blank" rel="noopener noreferrer" className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full bg-pink-50 text-red-600 hover:bg-pink-600 hover:text-white transition-all border border-red-100 transform hover:-translate-y-0.5 shadow-sm">
+                                        {email && <a href={`mailto:${email}`} target="_blank" rel="noopener noreferrer" className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full bg-pink-50 text-red-600 hover:bg-pink-600 hover:text-white transition-all border border-red-100 transform hover:-translate-y-0.5 shadow-sm">
                                             <FaEnvelope size={20} />
-                                        </a>
+                                        </a>}
 
-                                        <a href={socialMedia?.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-11 h-11 rounded-full bg-pink-50 text-pink-600 hover:bg-pink-600 hover:text-white transition-all border border-pink-100 transform hover:-translate-y-0.5 shadow-sm cursor-pointer">
+                                        {instagram && <a href={instagram} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-11 h-11 rounded-full bg-pink-50 text-pink-600 hover:bg-pink-600 hover:text-white transition-all border border-pink-100 transform hover:-translate-y-0.5 shadow-sm cursor-pointer">
                                             <FaInstagram size={20} />
-                                        </a>
+                                        </a>}
 
-                                        <a href={socialMedia?.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-11 h-11 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all border border-blue-100 transform hover:-translate-y-0.5 shadow-sm cursor-pointer">
+                                        {facebook && <a href={facebook} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-11 h-11 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all border border-blue-100 transform hover:-translate-y-0.5 shadow-sm cursor-pointer">
                                             <FaFacebookF size={20} />
-                                        </a>
+                                        </a>}
 
-                                        <a href={socialMedia?.youtube} target="_blank" rel="noopener noreferrer" className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all border border-red-100 transform hover:-translate-y-0.5 shadow-sm">
+                                        {youtube && <a href={youtube} target="_blank" rel="noopener noreferrer" className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all border border-red-100 transform hover:-translate-y-0.5 shadow-sm">
                                             <FaYoutube size={20} />
-                                        </a>
+                                        </a>}
 
-                                        <a href={`https://wa.me/${socialMedia?.whatsApp}?text=${encodeURIComponent(`Hello ${restaurant?.title}, I have seen your restaurant on Brij Deals, I want to know more about your restaurant.`)}`} target="_blank" rel="noopener noreferrer" className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-full bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm">
+                                        {whatsApp && <a href={`https://wa.me/${whatsApp}?text=${encodeURIComponent(`Hello ${restaurant?.title}, I have seen your ${businessType} on Brij Deals, I want to know more about your ${businessType}.`)}`} target="_blank" rel="noopener noreferrer" className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-full bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm">
                                             <FaWhatsapp size={20} />
-                                        </a>
+                                        </a>}
 
-                                    </div>
+                                    </div>}
 
                                 </div>
 
-                            </div>
+                            </div>}
 
                         </div>
 
@@ -290,7 +310,7 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                                {days.map((day) => {
+                                {validScheduleDays.map((day) => {
                                     const daySchedule = schedule?.[day.key];
                                     const isOpen = daySchedule?.opening && daySchedule?.closing;
                                     const isToday = day.key === todayKey;
@@ -336,13 +356,13 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule }) {
                             </div>
                         </div>
                     ) : (
-                        (restaurant?.openingTime || restaurant?.closingTime) && (
+                        hasGeneralSchedule && (
                             <div className="w-full mt-10 pt-8 border-t border-gray-150">
                                 <div className="flex flex-col items-center justify-center p-6 bg-gray-50 border border-gray-100 rounded-2xl w-full text-center">
                                     <FaRegClock className="text-primary text-2xl mb-2 animate-pulse" />
                                     <span className="font-nunito font-semibold text-gray-700">General Timing Schedule</span>
                                     <span className="font-nunito font-bold text-gray-900 text-lg mt-1">
-                                        {restaurant.openingTime} - {restaurant.closingTime}
+                                        {openingTime}{openingTime && closingTime ? " - " : ""}{closingTime}
                                     </span>
                                 </div>
                             </div>

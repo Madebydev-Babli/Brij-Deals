@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
+import { hasPublicText, hasPublicValue } from '@/utility/public-content';
 
 export default function RestaurantMenu({ menuCategories = [], menuItems = [] }) {
-    // Map items to their respective categories based on menuId matching category._id
-    const categoriesWithItems = menuCategories.map(cat => ({
-        ...cat,
-        items: menuItems.filter(item => item.menuId === cat._id)
-    }));
+    const categoriesWithItems = (Array.isArray(menuCategories) ? menuCategories : [])
+        .map((category) => ({
+            ...category,
+            items: (Array.isArray(menuItems) ? menuItems : []).filter((item) =>
+                String(item?.menuId) === String(category?._id) &&
+                hasPublicText(item?.name),
+            ),
+        }))
+        .filter((category) =>
+            hasPublicText(category?.category) && category.items.length > 0,
+        );
 
     const [activeCategory, setActiveCategory] = useState(
         categoriesWithItems.length > 0 ? categoriesWithItems[0].category : ""
@@ -117,17 +124,17 @@ export default function RestaurantMenu({ menuCategories = [], menuItems = [] }) 
                                         </h4>
 
                                         {/* CSS Flex Spacer for Dots */}
-                                        <div className="flex-1 border-b-[3px] border-dotted border-gray-200 relative mb-1 mx-2"></div>
+                                        {hasPublicValue(item.price) && <div className="flex-1 border-b-[3px] border-dotted border-gray-200 relative mb-1 mx-2"></div>}
 
-                                        <span className="text-xl font-bold text-primary font-nunito whitespace-nowrap pl-2">
+                                        {hasPublicValue(item.price) && <span className="text-xl font-bold text-primary font-nunito whitespace-nowrap pl-2">
                                             ₹{item.price}
-                                        </span>
+                                        </span>}
 
                                     </div>
 
-                                    <p className="text-gray-500 font-nunito text-sm leading-relaxed pr-12 md:pr-16 lg:pr-24">
-                                        {item.description}
-                                    </p>
+                                    {hasPublicText(item.description) && <p className="text-gray-500 font-nunito text-sm leading-relaxed pr-12 md:pr-16 lg:pr-24">
+                                        {item.description.trim()}
+                                    </p>}
 
                                 </div>
 

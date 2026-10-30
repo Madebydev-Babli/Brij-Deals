@@ -586,17 +586,19 @@ export async function GET(req) {
     const searchQuery = {
       ...(clearSearchValue
         ? {
-          $or: [
-            { title: { $regex: clearSearchValue, $options: "i" } },
-            { description: { $regex: clearSearchValue, $options: "i" } },
-            { history: { $regex: clearSearchValue, $options: "i" } },
-            { location: { $regex: clearSearchValue, $options: "i" } },
-            { slug: { $regex: clearSearchValue, $options: "i" } },
-          ],
+          title: {
+            $regex: clearSearchValue,
+            $options: "i",
+          },
         }
         : {}),
       ...(clearLocation
-        ? { location: { $regex: clearLocation, $options: "i" } }
+        ? {
+          location: {
+            $regex: clearLocation,
+            $options: "i",
+          },
+        }
         : {}),
     };
 

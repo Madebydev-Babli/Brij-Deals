@@ -1,11 +1,19 @@
 import React from 'react';
 import { FaMapMarkerAlt, FaWalking, FaCar } from 'react-icons/fa';
+import { hasPublicText } from '@/utility/public-content';
 
 export default function NearbyAttractions({ attractions }) {
+    const validAttractions = Array.isArray(attractions)
+        ? attractions.filter((spot) => hasPublicText(spot?.title))
+        : [];
 
     const getModeIcon = (mode) => {
-        return mode?.toLowerCase() === 'walk' ? <FaWalking className="text-gray-400 group-hover:text-primary transition-colors" /> : <FaCar className="text-gray-400 group-hover:text-primary transition-colors" />;
+        return hasPublicText(mode) && mode.trim().toLowerCase() === 'walk'
+            ? <FaWalking className="text-gray-400 group-hover:text-primary transition-colors" />
+            : <FaCar className="text-gray-400 group-hover:text-primary transition-colors" />;
     };
+
+    if (!validAttractions.length) return null;
 
     return (
         <section className="relative py-10">
@@ -40,7 +48,7 @@ export default function NearbyAttractions({ attractions }) {
                 {/* Highly Polished Cards Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
 
-                    {attractions.map((spot, index) => (
+                    {validAttractions.map((spot, index) => (
 
                         <div key={index} className="z-10 flex flex-col items-center text-center justify-start p-5 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group cursor-default transform hover:-translate-y-1">
 
@@ -51,17 +59,19 @@ export default function NearbyAttractions({ attractions }) {
                                     {spot.title}
                                 </h3>
 
-                                <div className="flex items-center gap-2">
+                                {(hasPublicText(spot.time) || hasPublicText(spot.duration) || hasPublicText(spot.distance)) && <div className="flex items-center gap-2">
 
+                                    {(hasPublicText(spot.time) || hasPublicText(spot.duration)) && (
                                     <span className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold font-nunito text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
-                                        {getModeIcon(spot.mode)} {spot.time || spot.duration}
+                                        {getModeIcon(spot.mode)} {hasPublicText(spot.time) ? spot.time.trim() : spot.duration.trim()}
                                     </span>
+                                    )}
 
-                                    <span className="text-[11px] sm:text-xs font-bold font-nunito text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100/50">
-                                        {spot.distance}
-                                    </span>
+                                    {hasPublicText(spot.distance) && <span className="text-[11px] sm:text-xs font-bold font-nunito text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100/50">
+                                        {spot.distance.trim()}
+                                    </span>}
 
-                                </div>
+                                </div>}
 
                             </div>
 

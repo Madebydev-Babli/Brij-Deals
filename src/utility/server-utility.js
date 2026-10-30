@@ -98,9 +98,9 @@ export async function getErrorMessage(error, session = null) {
         console.log("[Session Aborted]");
     }
 
-    if (process.env.ENVIORNMENT === "development") {
-        console.log("[Error]", error);
-        return error?.message;
+    if (process.env.NODE_ENV === "development") {
+        console.error("[Error]", error);
+        return error?.message || "Unexpected server error";
     }
 
     return "Something went wrong";

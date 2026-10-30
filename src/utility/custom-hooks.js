@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { getFriendlyImageUploadMessage } from '@/utility/image-upload';
 
@@ -70,6 +70,7 @@ export function useFetchPostAPI() {
 
 export function useFetchGetAPI() {
     const router = useRouter();
+    const latestRequestId = useRef(0);
     const [dataList, setDataList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [extra, setExtra] = useState({
@@ -89,6 +90,7 @@ export function useFetchGetAPI() {
     });
 
     const fetchGetAPI = useCallback(async (API_ENDPOINT, extraQuery = {}, secured = true) => {
+        const requestId = ++latestRequestId.current;
         try {
             const token = sessionStorage.getItem('token');
             if (secured && !token) {
@@ -116,6 +118,8 @@ export function useFetchGetAPI() {
 
             const data = await res.json();
 
+            if (requestId !== latestRequestId.current) return;
+
             if (data.status === "success") {
                 setDataList(data.data.data);
                 setExtra({
@@ -126,12 +130,18 @@ export function useFetchGetAPI() {
                     totalPages: data.data.extra.totalPages,
                 });
             } else {
+                setDataList([]);
                 toast.error(data.message, { position: "top-right" });
             }
         } catch (error) {
-            toast.error(error.message, { position: "top-right" });
+            if (requestId === latestRequestId.current) {
+                setDataList([]);
+                toast.error(error.message, { position: "top-right" });
+            }
         } finally {
-            setLoading(false);
+            if (requestId === latestRequestId.current) {
+                setLoading(false);
+            }
         }
     }, [query, router]);
 

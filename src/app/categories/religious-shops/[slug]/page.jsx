@@ -42,13 +42,8 @@ export default function Page() {
             <WebsiteLayout>
                 <ShopIntro shop={shop} />
 
-                <section className="min-h-screen">
-                    <ProductListSection products={shop?.products} phone={shop?.phone} whatsapp={shop?.whatsapp} />
-
-                    <section className="lg:pb-20">
-                        <NearbyAttractions attractions={shop?.attractions} />
-                    </section>
-                </section>
+                <ProductListSection products={shop?.products} phone={shop?.phone} whatsapp={shop?.whatsapp} />
+                <NearbyAttractions attractions={shop?.attractions} />
             </WebsiteLayout>
         </>
     );

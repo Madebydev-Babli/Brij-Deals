@@ -12,9 +12,33 @@ import { MdAdd } from "react-icons/md";
 import { TRAVEL_MODE_ENUM } from "@/utility/utility-data";
 import { useFetchDeleteAPI, useFetchDetailsAPI, useFetchGetAPI, useFetchPostAPI } from "@/utility/custom-hooks";
 import { handleInputChange } from "@/utility/utility-function";
+import CollectionTabEditor from "@/client-components/CollectionTabEditor";
+import { toast } from "react-toastify";
 
-export function AttractionsTab({ restaurentId }) {
+export function AttractionsTab({
+    restaurentId,
+    entityType = "restaurant",
+    entityId,
+    items = [],
+    onSave,
+    saving = false,
+}) {
+    if (entityType !== "restaurant") {
+        return (
+            <EmbeddedAttractions
+                entityType={entityType}
+                entityId={entityId}
+                items={items}
+                onSave={onSave}
+                saving={saving}
+            />
+        );
+    }
 
+    return <RestaurantAttractionsTab restaurentId={restaurentId} />;
+}
+
+function RestaurantAttractionsTab({ restaurentId }) {
     const [activeView, setActiveView] = useState('list');
     const [editDataId, setEditDataId] = useState(null);
 
@@ -27,7 +51,77 @@ export function AttractionsTab({ restaurentId }) {
 
         </>
     );
-};
+}
+
+function EmbeddedAttractions({ entityType, entityId, items, onSave, saving }) {
+    if (!["place", "religious-shop"].includes(entityType)) {
+        throw new Error(`Unsupported attractions entity type: ${entityType}`);
+    }
+
+    function validateSerialNumber(formData, _view, records, editIndex) {
+        const serialNumber = Number(formData.sno);
+        if (!Number.isInteger(serialNumber) || serialNumber < 1) {
+            return "Enter a valid serial number greater than zero.";
+        }
+        if (records.some((record, index) => index !== editIndex && Number(record.sno) === serialNumber)) {
+            return "That serial number is already in use.";
+        }
+        return null;
+    }
+
+    function saveAttractions(nextItems, onSuccess) {
+        if (!entityId || !onSave) {
+            toast.error("Unable to save attractions because the business record is unavailable.", { position: "top-right" });
+            return;
+        }
+
+        onSave(nextItems, onSuccess);
+    }
+
+    return (
+        <CollectionTabEditor
+            items={items}
+            onSave={saveAttractions}
+            saving={saving}
+            title="Attraction"
+            addLabel="Add Attraction"
+            emptyMessage="No Attractions Found"
+            persistSerialNumber
+            validate={validateSerialNumber}
+            fields={[
+                { name: "sno", type: "number", min: 1, step: 1, required: true, helperText: "" },
+                { name: "title", label: "Title", placeholder: "Enter the attraction title", required: true },
+                { name: "distance", label: "Distance", placeholder: "Enter the distance" },
+                {
+                    name: "duration",
+                    storageKey: "time",
+                    label: "Duration",
+                    placeholder: "Enter the duration",
+                },
+                {
+                    name: "mode",
+                    type: "select",
+                    label: "Mode",
+                    placeholder: "Select Mode",
+                    options: TRAVEL_MODE_ENUM.map((mode) => ({ value: mode, label: mode })),
+                },
+            ]}
+            columns={[
+                { name: "sno", label: "S.N." },
+                { name: "title", label: "Title" },
+                { name: "distance", label: "Distance" },
+                { name: "duration", storageKey: "time", label: "Duration" },
+                { name: "mode", label: "Mode" },
+            ]}
+            formLayout={[
+                {
+                    fields: ["sno", "title", "distance", "duration", "mode"],
+                    className: "grid grid-cols-1 gap-4 mb-4 md:grid-cols-2",
+                },
+            ]}
+        />
+    );
+}
 
 export function AttractionsListing({ restaurentId, setActiveView, setEditDataId }) {
 

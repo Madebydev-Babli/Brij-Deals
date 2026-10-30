@@ -12,7 +12,11 @@ import PaginationSection from "@/server-components/PaginationSection";
 import CollectionTabEditor from "@/client-components/CollectionTabEditor";
 import SharedSocialMediaFields from "@/client-components/SharedSocialMediaFields";
 import {
+  AMENITY_ICON_BY_IDENTIFIER,
+  AMENITY_ICON_MAP,
+  FALLBACK_AMENITY_ICON,
   RESTAURANT_AMENITIES_ENUM,
+  ROOM_AMENITIES_ENUM,
   TRAVEL_MODE_ENUM,
 } from "@/utility/utility-data";
 import { formatDateTime } from "@/utility/utility-function";
@@ -23,6 +27,21 @@ import {
 
 function imageUrlForGallery(image) {
   return typeof image === "string" ? image : image?.data || image?.url || "";
+}
+
+function getRoomAmenityName(amenity) {
+  return typeof amenity === "string" ? amenity : amenity?.name || amenity?.title || "";
+}
+
+function normalizeRoomAmenity(amenity) {
+  const name = getRoomAmenityName(amenity);
+  const savedIcon = amenity && typeof amenity === "object" ? amenity.icon : "";
+  return {
+    name,
+    icon:
+      AMENITY_ICON_MAP[name]?.iconName ||
+      (AMENITY_ICON_BY_IDENTIFIER[savedIcon] ? savedIcon : FALLBACK_AMENITY_ICON.iconName),
+  };
 }
 
 function TextField({
@@ -435,7 +454,9 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
             room.size,
             room.bedType,
             room.price,
-            ...(Array.isArray(room.amenities) ? room.amenities : []),
+            ...(Array.isArray(room.amenities)
+              ? room.amenities.map(getRoomAmenityName)
+              : []),
           ].some((value) =>
             String(value ?? "")
               .toLowerCase()
@@ -488,7 +509,9 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
     setEditIndex(index);
     setFormData({
       ...room,
-      amenities: Array.isArray(room.amenities) ? [...room.amenities] : [],
+      amenities: Array.isArray(room.amenities)
+        ? room.amenities.map(normalizeRoomAmenity)
+        : [],
       gallery: Array.isArray(room.gallery)
         ? room.gallery.map((item) => ({ ...item }))
         : [],
@@ -609,37 +632,78 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
                 onClick={() =>
                   setFormData((current) => ({
                     ...current,
-                    amenities: [...(current.amenities || []), ""],
+                    amenities: [...(current.amenities || []), { name: "", icon: "" }],
                   }))
                 }
               >
                 Add Amenity
               </AddButton>
             </div>
-            {(formData.amenities || []).map((amenity, amenityIndex) => (
-              <div key={amenityIndex} className="mb-2 flex gap-2">
-                <div className="flex-1">
+            {(formData.amenities || []).map((amenity, amenityIndex) => {
+              const AmenityIcon =
+                AMENITY_ICON_BY_IDENTIFIER[amenity.icon] ||
+                AMENITY_ICON_MAP[amenity.name]?.icon ||
+                FALLBACK_AMENITY_ICON.icon;
+
+              return (
+                <div
+                  key={amenityIndex}
+                  className="mb-4 grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]"
+                >
+                <div>
                   <label
                     htmlFor={`room-amenity-${amenityIndex}`}
                     className="form-label"
                   >
-                    Amenity
+                    Title
                   </label>
-                  <input
+                  <select
                     id={`room-amenity-${amenityIndex}`}
                     name={`amenity-${amenityIndex}`}
-                    value={amenity}
-                    placeholder="Enter an amenity"
+                    value={amenity.name}
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,
                         amenities: current.amenities.map((item, index) =>
-                          index === amenityIndex ? event.target.value : item,
+                          index === amenityIndex
+                            ? {
+                                name: event.target.value,
+                                icon:
+                                  AMENITY_ICON_MAP[event.target.value]?.iconName ||
+                                  "",
+                              }
+                            : item,
                         ),
                       }))
                     }
                     className="form-input"
-                  />
+                  >
+                    <option value="">Select an amenity</option>
+                    {!ROOM_AMENITIES_ENUM.some(
+                      (option) => option.title === amenity.name,
+                    ) && amenity.name && (
+                      <option value={amenity.name}>{amenity.name}</option>
+                    )}
+                    {ROOM_AMENITIES_ENUM.map((option) => (
+                      <option
+                        key={option.title}
+                        value={option.title}
+                        disabled={
+                          option.title !== amenity.name &&
+                          (formData.amenities || []).some(
+                            (selected, index) =>
+                              index !== amenityIndex &&
+                              selected.name === option.title,
+                          )
+                        }
+                      >
+                        {option.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/5 text-xl text-primary">
+                  {AmenityIcon && <AmenityIcon aria-hidden="true" />}
                 </div>
                 <RemoveButton
                   label="room amenity"
@@ -652,8 +716,9 @@ export function HotelRoomCategoriesTab({ hotel, onSave, saving }) {
                     }))
                   }
                 />
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
 
           <div className="mb-6">

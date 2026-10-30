@@ -1,7 +1,15 @@
 import React from 'react';
 import { RESTAURANT_AMENITIES_ENUM } from '@/utility/utility-data';
+import { hasPublicText } from '@/utility/public-content';
 
 export default function RestaurantAmenities({ amenities }) {
+    const validAmenities = Array.isArray(amenities)
+        ? amenities.filter((amenity) =>
+            hasPublicText(amenity?.title) || hasPublicText(amenity?.name),
+        )
+        : [];
+
+    if (!validAmenities.length) return null;
 
     return (
         <section className="py-10">
@@ -22,7 +30,7 @@ export default function RestaurantAmenities({ amenities }) {
                         </h2>
 
                         <p className="text-gray-600 text-base md:text-lg max-w-2xl font-nunito">
-                            Enjoy a seamless dining experience with the range of premium facilities and services offered at the restaurant.
+                            Enjoy a seamless visit with the range of premium facilities and services available.
                         </p>
 
                     </div>
@@ -33,9 +41,12 @@ export default function RestaurantAmenities({ amenities }) {
                 {/* Uses a highly responsive auto-fit grid. Gracefully handles any n-number of amenities */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5 lg:gap-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
 
-                    {amenities.map((amenity, index) => {
+                    {validAmenities.map((amenity, index) => {
+                        const amenityTitle = hasPublicText(amenity?.title)
+                            ? amenity.title.trim()
+                            : amenity.name.trim();
                         const matchedAmenity = RESTAURANT_AMENITIES_ENUM.find(
-                            (item) => item.title.toLowerCase() === amenity?.title?.toLowerCase()
+                            (item) => item.title.toLowerCase() === amenityTitle.toLowerCase()
                         );
                         const IconComponent = matchedAmenity ? matchedAmenity.icon : null;
 
@@ -53,7 +64,7 @@ export default function RestaurantAmenities({ amenities }) {
 
                                 {/* Amenity Title */}
                                 <span className="text-gray-800 font-nunito font-bold text-sm leading-snug">
-                                    {amenity?.title}
+                                    {amenityTitle}
                                 </span>
 
                             </div>

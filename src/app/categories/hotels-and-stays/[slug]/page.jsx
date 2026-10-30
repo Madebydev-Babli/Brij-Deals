@@ -80,7 +80,17 @@ export default function Page() {
     return (
         <WebsiteLayout>
 
-            <RestaurentIntro restaurant={normalizedHotel} />
+            <RestaurentIntro
+                restaurant={normalizedHotel}
+                businessType="hotel"
+                socialMedia={{
+                    website: normalizedHotel.website,
+                    instagram: normalizedHotel.instagram,
+                    facebook: normalizedHotel.facebook,
+                    youtube: normalizedHotel.youtube,
+                    whatsApp: normalizedHotel.whatsapp,
+                }}
+            />
 
             <RestaurantOffers offers={normalizedHotel?.offers} whatsapp={normalizedHotel?.whatsapp} />
 

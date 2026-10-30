@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useRef } from 'react';
+import { hasPublicText } from "@/utility/public-content";
 
 export default function PlaceTipsSection({ place }) {
+    const validTips = Array.isArray(place?.visitorTips)
+        ? place.visitorTips.filter(
+            (tip) => hasPublicText(tip?.label) || hasPublicText(tip?.description),
+        )
+        : [];
 
     const scrollContainerRef = useRef(null);
 
@@ -17,6 +23,8 @@ export default function PlaceTipsSection({ place }) {
             scrollContainerRef.current.scrollBy({ left: 350, behavior: 'smooth' });
         }
     };
+
+    if (!validTips.length) return null;
 
 
     return <>
@@ -66,7 +74,7 @@ export default function PlaceTipsSection({ place }) {
                 {/* Scrolling Tips Container */}
                 <div ref={scrollContainerRef} className="flex overflow-x-auto gap-5 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-5 px-5 sm:mx-0 sm:px-0 scroll-smooth relative z-20 pb-10 pt-10">
 
-                    {place?.visitorTips?.map((tip, index) => (
+                    {validTips.map((tip, index) => (
 
                         <div key={index} className="flex-none w-[280px] sm:w-[300px] lg:w-[300px] xl:w-[320px] snap-start group relative bg-white p-5 rounded-[2rem] border-2 border-primary/30 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:shadow-orange-100/50 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
 
@@ -75,13 +83,13 @@ export default function PlaceTipsSection({ place }) {
 
                             <div className="relative z-10">
 
-                                <h4 className="text-2xl font-bold font-cormorant-garamond text-gray-900 mb-2 tracking-wide">
-                                    {tip.label}
-                                </h4>
+                                {hasPublicText(tip.label) && <h4 className="text-2xl font-bold font-cormorant-garamond text-gray-900 mb-2 tracking-wide">
+                                    {tip.label.trim()}
+                                </h4>}
 
-                                <p className="text-gray-600 font-nunito text-base leading-relaxed">
-                                    {tip.description}
-                                </p>
+                                {hasPublicText(tip.description) && <p className="text-gray-600 font-nunito text-base leading-relaxed">
+                                    {tip.description.trim()}
+                                </p>}
 
                             </div>
 

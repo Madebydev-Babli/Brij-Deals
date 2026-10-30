@@ -3,7 +3,12 @@ import mongoose from "mongoose";
 import connectToDatabase from "../../../../backend/configurations/mongoose.config";
 import { verifyToken } from "../../../../backend/middlewares/verify-token";
 import { HotelModel } from "../../../../backend/models/hotel";
-import { bulkDeleteImages, clearSearch, deleteImage, getErrorMessage, uploadImage } from "@/utility/server-utility";
+import { bulkDeleteImages, deleteImage, getErrorMessage, uploadImage } from "@/utility/server-utility";
+import {
+    AMENITY_ICON_BY_IDENTIFIER,
+    AMENITY_ICON_MAP,
+    FALLBACK_AMENITY_ICON,
+} from "@/utility/utility-data";
 import { revalidatePath } from "next/cache";
 
 function createSlug(title) {
@@ -88,6 +93,38 @@ function normalizeAttractions(attractions) {
     }));
 }
 
+function normalizeRoomAmenity(amenity) {
+    const isLegacyString = typeof amenity === "string";
+    if (amenity == null) return null;
+    if (!isLegacyString && (typeof amenity !== "object" || Array.isArray(amenity))) {
+        throw Object.assign(new Error("Room amenities must contain names and icon identifiers"), { statusCode: 400 });
+    }
+
+    const rawName = isLegacyString ? amenity : amenity.name ?? amenity.title;
+    if (rawName == null || rawName === "") return null;
+    if (typeof rawName !== "string") {
+        throw Object.assign(new Error("Room amenity names must be strings"), { statusCode: 400 });
+    }
+
+    const name = rawName.trim();
+    if (!name) return null;
+
+    const mappedIcon = AMENITY_ICON_MAP[name]?.iconName;
+    const submittedIcon = typeof amenity?.icon === "string" ? amenity.icon.trim() : "";
+    const icon = mappedIcon ||
+        (AMENITY_ICON_BY_IDENTIFIER[submittedIcon] ? submittedIcon : "") ||
+        (isLegacyString ? FALLBACK_AMENITY_ICON.iconName : "");
+
+    if (!icon) {
+        throw Object.assign(
+            new Error(`Room amenity "${name}" has an invalid icon identifier`),
+            { statusCode: 400 },
+        );
+    }
+
+    return { name, icon };
+}
+
 async function uploadSingleImage(imageData, folder, maxSize = 5 * 1024 * 1024) {
     if (!imageData?.data) return null;
     const uploaded = await uploadImage(imageData.data, folder, maxSize);
@@ -158,7 +195,7 @@ async function normalizeRoomCategories(roomCategories = []) {
             guests: Number(room.guests) || 1,
             price: room.price?.toString().trim() || "",
             amenities: Array.isArray(room.amenities)
-                ? room.amenities.map((item) => typeof item === "string" ? item : item?.name || item?.title || "").filter(Boolean)
+                ? room.amenities.map(normalizeRoomAmenity).filter(Boolean)
                 : [],
         });
     }
@@ -567,7 +604,9 @@ export async function GET(req) {
         const limit = Number(searchParams.get("limit")) || 10;
         const page = Number(searchParams.get("page")) || 1;
         const searchValue = searchParams.get("searchValue") || "";
-        const shortLocation = searchParams.get("shortLocation") || "";
+        const location = searchParams.get("location") || "";
+        const minPriceValue = searchParams.get("minPrice");
+        const maxPriceValue = searchParams.get("maxPrice");
 
         if (_id) {
             const hotel = await HotelModel.findById(_id).lean();
@@ -585,24 +624,49 @@ export async function GET(req) {
             return NextResponse.json({ status: "success", message: "Hotel fetched successfully", data: { data: [hotel] }, error: null }, { status: 200 });
         }
 
-        const cleanSearchValue = clearSearch(searchValue);
-        const cleanShortLocation = clearSearch(shortLocation);
+        const cleanSearchValue = searchValue.trim();
+        const cleanLocation = location.trim();
+        const priceBounds = {};
 
-        const searchQuery = {
-            ...(cleanSearchValue ? {
-                $or: [
-                    { title: { $regex: cleanSearchValue, $options: "i" } },
-                    { description: { $regex: cleanSearchValue, $options: "i" } },
-                    { location: { $regex: cleanSearchValue, $options: "i" } },
-                    { shortLocation: { $regex: cleanSearchValue, $options: "i" } },
-                    { email: { $regex: cleanSearchValue, $options: "i" } },
-                    { phone: { $regex: cleanSearchValue, $options: "i" } },
-                    { whatsapp: { $regex: cleanSearchValue, $options: "i" } },
-                    { slug: { $regex: cleanSearchValue, $options: "i" } },
-                ],
-            } : {}),
-            ...(cleanShortLocation ? { shortLocation: { $regex: cleanShortLocation, $options: "i" } } : {}),
-        };
+        for (const [name, value] of [["minPrice", minPriceValue], ["maxPrice", maxPriceValue]]) {
+            if (value === null) continue;
+            const price = Number(value);
+            if (!Number.isFinite(price) || price < 0) {
+                return NextResponse.json(
+                    { status: "error", message: `${name} must be a non-negative number`, data: null, error: `${name} must be a non-negative number` },
+                    { status: 400 },
+                );
+            }
+            priceBounds[name === "minPrice" ? "$gte" : "$lte"] = price;
+        }
+
+        if (
+            priceBounds.$gte !== undefined &&
+            priceBounds.$lte !== undefined &&
+            priceBounds.$gte > priceBounds.$lte
+        ) {
+            return NextResponse.json(
+                { status: "error", message: "minPrice cannot exceed maxPrice", data: null, error: "minPrice cannot exceed maxPrice" },
+                { status: 400 },
+            );
+        }
+
+        const searchQuery = {};
+        if (cleanSearchValue) {
+            searchQuery.title = {
+                $regex: cleanSearchValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                $options: "i",
+            };
+        }
+        if (cleanLocation) {
+            searchQuery.location = {
+                $regex: cleanLocation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                $options: "i",
+            };
+        }
+        if (Object.keys(priceBounds).length) {
+            searchQuery.startingPrice = { $type: "number", ...priceBounds };
+        }
 
         const totalData = await HotelModel.countDocuments();
         const totalFilteredData = await HotelModel.countDocuments(searchQuery);
