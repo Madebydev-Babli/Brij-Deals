@@ -50,6 +50,7 @@ export default function ShopIntro({ shop }) {
   const hasSchedule =
     hasPublicText(shop?.openingTime) && hasPublicText(shop?.closingTime);
   const phone = hasPublicText(shop?.phone) ? shop.phone.trim() : "";
+  const whatsapp = hasPublicText(shop?.whatsapp) ? shop.whatsapp.trim() : "";
   const email = hasPublicText(shop?.email) ? shop.email.trim() : "";
   const website = getPublicLinkUrl(shop?.website);
   const instagram = getPublicLinkUrl(shop?.instagram);
@@ -60,7 +61,9 @@ export default function ShopIntro({ shop }) {
   const reviewCount = Number(shop?.reviewCount);
   const hasRating = Number.isFinite(rating) && rating > 0;
   const hasReviews = Number.isFinite(reviewCount) && reviewCount > 0;
-  const hasSocialLinks = Boolean(phone || email || instagram || facebook || youtube);
+  const hasSocialLinks = Boolean(
+    phone || whatsapp || email || instagram || facebook || youtube,
+  );
   const hasContactActions = Boolean(phone || email || website || hasSocialLinks);
   const hasDesktopActions = Boolean(
     phone || whatsapp || website || instagram || facebook || youtube,
@@ -246,8 +249,8 @@ export default function ShopIntro({ shop }) {
 
                       {/* Social Media Grid */}
                       <div className="grid grid-cols-5 gap-2">
-                        {phone && <a
-                          href={`https://wa.me/${phone}?text=${encodeURIComponent(`Hello ${shop?.title}, I have seen your shop on Brij Deals, I want to know more about your shop.`)}`}
+                        {whatsapp && <a
+                          href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hello ${shop?.title}, I have seen your shop on Brij Deals, I want to know more about your shop.`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex flex-col items-center gap-1.5 group cursor-pointer"
@@ -425,8 +428,8 @@ export default function ShopIntro({ shop }) {
                       <FaYoutube size={20} />
                     </a>}
 
-                    {phone && <a
-                      href={`https://wa.me/${phone}?text=${encodeURIComponent(`Hello ${shop?.title}, I have seen your shop on Brij Deals, I want to know more about your shop.`)}`}
+                    {whatsapp && <a
+                      href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hello ${shop?.title}, I have seen your shop on Brij Deals, I want to know more about your shop.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center w-11 h-11 rounded-full bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-100 transform hover:-translate-y-0.5 shadow-sm"

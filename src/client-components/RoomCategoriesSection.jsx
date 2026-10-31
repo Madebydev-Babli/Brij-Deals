@@ -37,7 +37,8 @@ export default function RoomCategoriesSection({ rooms, phone, whatsapp }) {
                         </div>
 
                         <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold font-cormorant-garamond tracking-tight text-gray-900 mb-4">
-                            Exceptional <span className="text-primary">Room Categories</span>
+                            Discover 
+ <span className="text-primary">Divine Products</span>
                         </h2>
 
                         <p className="text-gray-600 text-base md:text-lg max-w-2xl font-nunito">

@@ -6,10 +6,30 @@ import { FaMapMarkerAlt, FaPhoneAlt, FaShareAlt, FaRegClock, FaInstagram, FaFace
 import Image from "next/image";
 import { getPublicImageUrl, getPublicLinkUrl, hasPublicText } from "@/utility/public-content";
 
+function getTimeInMinutes(time) {
+    const match = time.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (!match) return null;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const meridiem = match[3]?.toUpperCase();
+
+    if (minutes > 59 || (meridiem && (hours < 1 || hours > 12)) || (!meridiem && hours > 23)) {
+        return null;
+    }
+
+    if (meridiem) {
+        hours = (hours % 12) + (meridiem === "PM" ? 12 : 0);
+    }
+
+    return hours * 60 + minutes;
+}
+
 export default function RestaurentIntro({ restaurant, socialMedia, schedule, businessType = "restaurant" }) {
 
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [now, setNow] = useState(null);
     const shareRef = useRef(null);
 
     // Close popup on outside click
@@ -22,6 +42,16 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule, bus
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (businessType !== "hotel") return;
+
+        const updateTime = () => setNow(new Date());
+        updateTime();
+        const intervalId = setInterval(updateTime, 60_000);
+
+        return () => clearInterval(intervalId);
+    }, [businessType]);
 
     const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://brijdeals.com';
 
@@ -65,6 +95,15 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule, bus
     const openingTime = hasPublicText(restaurant?.openingTime) ? restaurant.openingTime.trim() : "";
     const closingTime = hasPublicText(restaurant?.closingTime) ? restaurant.closingTime.trim() : "";
     const hasGeneralSchedule = Boolean(openingTime || closingTime);
+    const hotelOpeningMinutes = businessType === "hotel" ? getTimeInMinutes(openingTime) : null;
+    const hotelClosingMinutes = businessType === "hotel" ? getTimeInMinutes(closingTime) : null;
+    const currentTimeMinutes = now ? now.getHours() * 60 + now.getMinutes() : null;
+    const isHotelOpen = currentTimeMinutes !== null && hotelOpeningMinutes !== null && hotelClosingMinutes !== null && (
+        hotelOpeningMinutes <= hotelClosingMinutes
+            ? currentTimeMinutes >= hotelOpeningMinutes && currentTimeMinutes < hotelClosingMinutes
+            : currentTimeMinutes >= hotelOpeningMinutes || currentTimeMinutes < hotelClosingMinutes
+    );
+    const hasHotelTiming = businessType === "hotel" && openingTime && closingTime;
 
     const formatTime = (time) => {
         if (!time) return "Closed";
@@ -229,6 +268,18 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule, bus
                                     {restaurant?.title}
                                 </h1>
 
+                                {hasHotelTiming && <div className="flex items-start gap-2 text-gray-600 font-nunito text-sm md:text-base">
+                                    <FaRegClock className="text-primary mt-1 shrink-0" />
+                                    <span>
+                                        {currentTimeMinutes !== null && <>
+                                            <strong className={`font-semibold ${isHotelOpen ? "text-green-600" : "text-red-500"}`}>
+                                                {isHotelOpen ? "Open" : "Closed"}
+                                            </strong>{" "}
+                                            •
+                                        </>} {openingTime} - {closingTime}
+                                    </span>
+                                </div>}
+
                                 {/* Meta Info (Location & Time) */}
                                 {(location || mapLink) && <div className="flex flex-col gap-2.5 items-center md:items-start">
                                     <div className="flex items-start gap-2 text-gray-600 font-nunito text-sm md:text-base">
@@ -356,7 +407,7 @@ export default function RestaurentIntro({ restaurant, socialMedia, schedule, bus
                             </div>
                         </div>
                     ) : (
-                        hasGeneralSchedule && (
+                        businessType !== "hotel" && hasGeneralSchedule && (
                             <div className="w-full mt-10 pt-8 border-t border-gray-150">
                                 <div className="flex flex-col items-center justify-center p-6 bg-gray-50 border border-gray-100 rounded-2xl w-full text-center">
                                     <FaRegClock className="text-primary text-2xl mb-2 animate-pulse" />
